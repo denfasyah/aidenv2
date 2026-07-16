@@ -36,7 +36,7 @@ Dokumen ini memuat langkah pengerjaan E2E secara berurutan sesuai alur pengemban
 ## Fase 5: User Dashboard (Ruang Pribadi)
 - [x] **[AGENT]** Bangun *Top Navbar* (`components/layout/top-navbar.tsx`) berisi Lonceng Notifikasi dan Profil.
 - [x] **[AGENT]** Bangun *Sidebar User* (`components/layout/user-sidebar.tsx`) berisi: Dashboard, Workspaces, Assistant, Notes, History.
-- [x] **[AGENT]** Terapkan layout di `app/(dashboard)/layout.tsx`.
+- [x] **[AGENT]** Terapkan layout di `app/(main)/layout.tsx`.
 - [x] **[AGENT]** Buat halaman `/dashboard` yang menampilkan statistik dari database (Total Flashcards, dsb) dan *Feed* singkat dari Activity Logs.
 
 ## Fase 6: Core Fitur (Aktivitas Utama)

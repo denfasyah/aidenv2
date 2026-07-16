@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
-import { AuthCard, AuthDivider } from "@/components/auth/auth-card"
-import { GoogleButton } from "@/components/auth/google-button"
-import { LoginForm } from "@/components/auth/login-form"
+import { AuthCard, AuthDivider } from "@/components/features/auth/auth-card"
+import { GoogleButton } from "@/components/features/auth/google-button"
+import { LoginForm } from "@/components/features/auth/login-form"
 
 export const metadata: Metadata = {
   title: "Masuk",
