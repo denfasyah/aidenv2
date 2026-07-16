@@ -1,37 +1,65 @@
-import Swal from "sweetalert2"
+import Swal, { type SweetAlertOptions } from "sweetalert2"
 
-/**
- * Utility SweetAlert2 yang dikustomisasi dengan tema Tailwind aplikasi
- */
+// Base config yang selalu pakai CSS variable dinamis
+const baseStyle: SweetAlertOptions = {
+  background: "hsl(var(--card-bg))",
+  color: "hsl(var(--card-fg))",
+  buttonsStyling: false,
+  customClass: {
+    backdrop: "swal2-backdrop-custom",
+  }
+}
+
 export const showAlert = {
   success: (title: string, text: string) => {
     return Swal.fire({
+      ...baseStyle,
       title,
       text,
       icon: "success",
       confirmButtonText: "Tutup",
-      buttonsStyling: false,
+      timer: 2000,
+      timerProgressBar: true,
       customClass: {
-        popup: "bg-card text-card-foreground rounded-2xl border border-border",
-        title: "text-foreground font-bold",
-        htmlContainer: "text-muted-foreground",
-        confirmButton: "bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg font-medium w-full mt-4 transition-colors",
+        ...baseStyle.customClass,
+        popup: "swal-popup-custom",
+        confirmButton: "swal-btn-primary",
       }
     })
   },
+
   error: (title: string, text: string) => {
     return Swal.fire({
+      ...baseStyle,
       title,
       text,
       icon: "error",
       confirmButtonText: "Coba Lagi",
-      buttonsStyling: false,
       customClass: {
-        popup: "bg-card text-card-foreground rounded-2xl border border-border",
-        title: "text-foreground font-bold",
-        htmlContainer: "text-muted-foreground",
-        confirmButton: "bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-lg font-medium w-full mt-4 transition-colors",
+        ...baseStyle.customClass,
+        popup: "swal-popup-custom",
+        confirmButton: "swal-btn-destructive",
       }
     })
   },
+
+  confirm: (title: string, text: string, confirmText = "Ya, Lanjutkan", cancelText = "Batal") => {
+    return Swal.fire({
+      ...baseStyle,
+      title,
+      text,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: confirmText,
+      cancelButtonText: cancelText,
+      reverseButtons: true,
+      customClass: {
+        ...baseStyle.customClass,
+        popup: "swal-popup-custom",
+        actions: "swal-actions-row",
+        confirmButton: "swal-btn-destructive",
+        cancelButton: "swal-btn-cancel",
+      }
+    })
+  }
 }
