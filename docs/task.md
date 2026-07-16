@@ -22,12 +22,16 @@ Dokumen ini memuat langkah pengerjaan E2E secara berurutan sesuai alur pengemban
 - [x] **[AGENT]** Desain "How It Works" Section (4 langkah).
 - [x] **[AGENT]** Desain CTA Section dan Footer.
 
-## Fase 4: Autentikasi (Login & Register)
-- [ ] **[USER]** Aktifkan Google OAuth di Supabase dan atur Client ID.
-- [ ] **[AGENT]** Siapkan Klien Supabase (`lib/supabase/server.ts` & `client.ts`).
-- [ ] **[AGENT]** Bangun `app/(auth)/login/page.tsx` dan `register/page.tsx` (Formulir modern berbasis Card).
-- [ ] **[AGENT]** Integrasikan fungsi Sign In/Up Email dan Tombol Google OAuth.
-- [ ] **[AGENT]** Buat `middleware.ts`. Atur rute perlindungan (`/dashboard`, `/admin`) berdasarkan pengecekan tabel `users.role`.
+## Fase 4: Autentikasi (Supabase Auth)
+- [x] **[USER]** Setup proyek Supabase.
+- [x] **[USER]** Setup Google OAuth Client ID & Secret di GCP.
+- [x] **[USER]** Konfigurasi Google Provider di dashboard Supabase.
+- [x] **[USER]** Setup `.env.local` dengan anon key & url Supabase.
+- [x] **[AGENT]** Buat instance klien Supabase (`client`, `server`, dan `middleware`).
+- [x] **[AGENT]** Buat halaman Login (`/login`) dengan desain modern (mendukung form & tombol OAuth).
+- [x] **[AGENT]** Buat halaman Register (`/register`) (form & tombol OAuth).
+- [x] **[AGENT]** Buat Auth Callback Handler untuk memproses token OAuth ke sesi.
+- [x] **[AGENT]** Implementasikan Middleware Next.js untuk memproteksi *private routes* (`/dashboard`, dll) dan redirect otomatis jika belum login.
 
 ## Fase 5: User Dashboard (Ruang Pribadi)
 - [ ] **[AGENT]** Bangun *Top Navbar* (`components/layout/top-navbar.tsx`) berisi Lonceng Notifikasi dan Profil.
