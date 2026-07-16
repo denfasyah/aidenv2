@@ -6,24 +6,24 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from "lucide-react"
 import { Button, Input } from "@/components/ui"
 import { createClient } from "@/utils/supabase/client"
 import { motion } from "framer-motion"
+import { showAlert } from "@/lib/swal"
 
-/**
- * Form Register interaktif (Client Component).
- * Dipisah dari page.tsx agar page bisa menjadi Server Component.
- */
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [form, setForm] = useState({ name: "", email: "", password: "" })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
 
+    // Validasi Lengkap
+    if (!form.name || !form.email || !form.password) {
+      showAlert.error("Validasi Gagal", "Semua kolom wajib diisi.")
+      return
+    }
     if (form.password.length < 8) {
-      setError("Password minimal 8 karakter.")
+      showAlert.error("Password Lemah", "Password minimal harus 8 karakter.")
       return
     }
 
@@ -40,8 +40,8 @@ export function RegisterForm() {
     })
 
     if (error) {
-      setError(error.message || "Gagal mendaftar. Coba lagi.")
       setIsLoading(false)
+      showAlert.error("Pendaftaran Gagal", error.message || "Gagal mendaftar. Silakan coba lagi.")
       return
     }
 
@@ -91,7 +91,6 @@ export function RegisterForm() {
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
         leftIcon={<User className="h-4 w-4" />}
-        required
         autoComplete="name"
       />
       <Input
@@ -102,7 +101,6 @@ export function RegisterForm() {
         value={form.email}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
         leftIcon={<Mail className="h-4 w-4" />}
-        required
         autoComplete="email"
       />
       <div className="relative">
@@ -114,7 +112,6 @@ export function RegisterForm() {
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
           leftIcon={<Lock className="h-4 w-4" />}
-          required
           autoComplete="new-password"
         />
         <button
@@ -127,23 +124,17 @@ export function RegisterForm() {
         </button>
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
       <Button
         type="submit"
         id="btn-register-submit"
-        className="w-full h-11 gap-2 mt-1"
+        className="w-full h-11 gap-2 mt-2"
         isLoading={isLoading}
       >
         Buat Akun
         <ArrowRight className="h-4 w-4" />
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground mt-2">
         Sudah punya akun?{" "}
         <Link href="/login" className="text-primary font-semibold hover:underline">
           Masuk di sini

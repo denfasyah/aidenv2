@@ -7,21 +7,23 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react"
 import { Button, Input } from "@/components/ui"
 import { createClient } from "@/utils/supabase/client"
 import { motion } from "framer-motion"
+import { showAlert } from "@/lib/swal"
 
-/**
- * Form Login interaktif (Client Component).
- * Dipisah dari page.tsx agar page bisa menjadi Server Component.
- */
 export function LoginForm() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({ email: "", password: "" })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
+
+    // Validasi Form
+    if (!form.email || !form.password) {
+      showAlert.error("Validasi Gagal", "Email dan password wajib diisi.")
+      return
+    }
+
     setIsLoading(true)
 
     const supabase = createClient()
@@ -31,8 +33,8 @@ export function LoginForm() {
     })
 
     if (error) {
-      setError("Email atau password salah. Silakan coba lagi.")
       setIsLoading(false)
+      showAlert.error("Login Gagal", "Email atau password yang Anda masukkan salah.")
       return
     }
 
@@ -56,7 +58,6 @@ export function LoginForm() {
         value={form.email}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
         leftIcon={<Mail className="h-4 w-4" />}
-        required
         autoComplete="email"
       />
 
@@ -70,7 +71,6 @@ export function LoginForm() {
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             leftIcon={<Lock className="h-4 w-4" />}
-            required
             autoComplete="current-password"
           />
           <button
@@ -87,23 +87,17 @@ export function LoginForm() {
         </Link>
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
       <Button
         type="submit"
         id="btn-login-submit"
-        className="w-full h-11 gap-2 mt-1"
+        className="w-full h-11 gap-2 mt-2"
         isLoading={isLoading}
       >
         Masuk
         <ArrowRight className="h-4 w-4" />
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground mt-2">
         Belum punya akun?{" "}
         <Link href="/register" className="text-primary font-semibold hover:underline">
           Daftar sekarang
