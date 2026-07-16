@@ -4,13 +4,16 @@ Dokumen ini memuat langkah pengerjaan E2E secara berurutan sesuai alur pengemban
 
 ## Fase 1: Setup Infrastruktur & Database
 - [x] **[AGENT]** Inisialisasi Next.js, Tailwind, dan utilitas dasar.
-- [ ] **[USER]** Jalankan skrip `supabase-schema.sql` terbaru di SQL Editor (Berisi 10 tabel, termasuk perubahan `users`).
+- [ x] **[USER]** Jalankan skrip `supabase-schema.sql` terbaru di SQL Editor (Berisi 10 tabel, termasuk perubahan `users`).
 - [x] **[AGENT]** Buat ulang `types/database.types.ts` agar selaras dengan tabel `users` yang baru.
 
 ## Fase 2: Sistem Desain Visual & Komponen UI Inti
-- [ ] **[AGENT]** Konfigurasi `app/globals.css` untuk warna Primary Green dan dukungan Dark/Light mode.
-- [ ] **[AGENT]** Setup `providers/theme-provider.tsx` dan `lib/utils.ts`.
-- [ ] **[AGENT]** Rakit UI Components dasar (`Button`, `Input`, `Card`, `Modal`) di `components/ui/`.
+- [x] **[AGENT]** Konfigurasi `app/globals.css` untuk warna Primary Green dan dukungan Dark/Light mode (CSS Variables penuh).
+- [x] **[AGENT]** Setup `providers/theme-provider.tsx`, `lib/utils.ts`, dan `components/layout/theme-toggle.tsx`.
+- [x] **[AGENT]** Rakit UI Components dasar (`Button`, `Input`, `Textarea`, `Card`, `Badge`, `Separator`) di `components/ui/index.tsx`.
+- [x] **[AGENT]** Buat komponen Skeleton (`components/ui/skeleton.tsx`): StatCard, TableRow, Activity, WorkspaceCard, ChatMessage.
+- [x] **[AGENT]** Buat halaman `app/loading.tsx` (global loading state).
+- [x] **[AGENT]** Buat halaman `app/not-found.tsx` (halaman 404).
 
 ## Fase 3: Landing Page (Halaman Utama)
 - [ ] **[AGENT]** Desain Hero Section di `app/page.tsx` (Slogan, Deskripsi).
