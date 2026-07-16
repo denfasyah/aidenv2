@@ -16,9 +16,11 @@ Dokumen ini memuat langkah pengerjaan E2E secara berurutan sesuai alur pengemban
 - [x] **[AGENT]** Buat halaman `app/not-found.tsx` (halaman 404).
 
 ## Fase 3: Landing Page (Halaman Utama)
-- [ ] **[AGENT]** Desain Hero Section di `app/page.tsx` (Slogan, Deskripsi).
-- [ ] **[AGENT]** Desain bagian Fitur (Penjelasan AI Assistant, Flashcard).
-- [ ] **[AGENT]** Tambahkan navigasi statis ke `/login` dan `/register`.
+- [x] **[AGENT]** Desain Navbar sticky dengan backdrop blur, logo, link navigasi, dan ThemeToggle.
+- [x] **[AGENT]** Desain Hero Section (`app/page.tsx`) dengan badge, headline, subheading, dan CTA buttons.
+- [x] **[AGENT]** Desain Features Section (6 kartu fitur dalam grid responsif).
+- [x] **[AGENT]** Desain "How It Works" Section (4 langkah).
+- [x] **[AGENT]** Desain CTA Section dan Footer.
 
 ## Fase 4: Autentikasi (Login & Register)
 - [ ] **[USER]** Aktifkan Google OAuth di Supabase dan atur Client ID.
