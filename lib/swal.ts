@@ -4,10 +4,7 @@ import Swal, { type SweetAlertOptions } from "sweetalert2"
 const baseStyle: SweetAlertOptions = {
   background: "hsl(var(--card-bg))",
   color: "hsl(var(--card-fg))",
-  buttonsStyling: false,
-  customClass: {
-    backdrop: "swal2-backdrop-custom",
-  }
+  buttonsStyling: false
 }
 
 export const showAlert = {
@@ -21,7 +18,6 @@ export const showAlert = {
       timer: 2000,
       timerProgressBar: true,
       customClass: {
-        ...baseStyle.customClass,
         popup: "swal-popup-custom",
         confirmButton: "swal-btn-primary",
       }
@@ -36,7 +32,6 @@ export const showAlert = {
       icon: "error",
       confirmButtonText: "Coba Lagi",
       customClass: {
-        ...baseStyle.customClass,
         popup: "swal-popup-custom",
         confirmButton: "swal-btn-destructive",
       }
@@ -54,7 +49,6 @@ export const showAlert = {
       cancelButtonText: cancelText,
       reverseButtons: true,
       customClass: {
-        ...baseStyle.customClass,
         popup: "swal-popup-custom",
         actions: "swal-actions-row",
         confirmButton: "swal-btn-destructive",

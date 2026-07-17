@@ -40,7 +40,7 @@ Dokumen ini memuat langkah pengerjaan E2E secara berurutan sesuai alur pengemban
 - [x] **[AGENT]** Buat halaman `/dashboard` yang menampilkan statistik dari database (Total Flashcards, dsb) dan *Feed* singkat dari Activity Logs.
 
 ## Fase 6: Core Fitur (Aktivitas Utama)
-- [ ] **[AGENT]** Halaman **Workspaces**: CRUD ruang kerja belajar.
+- [x] **[AGENT]** Halaman **Workspaces**: CRUD ruang kerja belajar.
 - [ ] **[AGENT]** Halaman **Notes**: Integrasi Text Editor untuk catatan manual, simpan ke tabel `notes`.
 - [ ] **[AGENT]** Halaman **History**: Tabel/Timeline memanggil dari `activity_logs`.
 - [ ] **[AGENT]** Halaman **Assistant**: ChatBox AI. Jika diakses via sidebar, jalankan fungsi *Global Chat* (`workspace_id IS NULL`).
