@@ -38,8 +38,12 @@ export function LoginForm() {
       return
     }
 
-    router.push("/dashboard")
     router.refresh()
+    // Tampilkan SweetAlert sukses, lalu redirect
+    showAlert.success("Berhasil Masuk", "Selamat datang kembali!")
+    setTimeout(() => {
+      router.push("/dashboard")
+    }, 1000)
   }
 
   return (

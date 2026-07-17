@@ -44,34 +44,34 @@
 
 /* ── Dark Mode ── */
 .dark {
-  --bg: 0 0% 4%;
-  --bg-subtle: 0 0% 7%;
-  --fg: 0 0% 90%;
+  --bg: 222 47% 8%;
+  --bg-subtle: 222 47% 11%;
+  --fg: 210 40% 96%;
 
-  --card-bg: 0 0% 6%;
-  --card-fg: 0 0% 90%;
+  --card-bg: 222 47% 10%;
+  --card-fg: 210 40% 96%;
 
-  --border: 0 0% 15%;
-  --input: 0 0% 15%;
+  --border: 217 33% 20%;
+  --input: 217 33% 20%;
   --ring: 142 70% 45%;
 
-  --sidebar-bg: 0 0% 5%;
-  --sidebar-fg: 0 0% 90%;
-  --sidebar-border: 0 0% 15%;
+  --sidebar-bg: 222 47% 7%;
+  --sidebar-fg: 210 40% 96%;
+  --sidebar-border: 217 33% 18%;
   --sidebar-accent: 142 72% 10%;
   --sidebar-accent-fg: 142 70% 45%;
 
   --primary: 142 70% 45%;
-  --primary-fg: 0 0% 5%;
+  --primary-fg: 222 47% 6%;
 
-  --secondary: 0 0% 10%;
-  --secondary-fg: 0 0% 90%;
+  --secondary: 222 47% 14%;
+  --secondary-fg: 210 40% 96%;
 
-  --muted: 0 0% 10%;
-  --muted-fg: 0 0% 60%;
+  --muted: 222 47% 14%;
+  --muted-fg: 215 20% 55%;
 
-  --accent: 0 0% 10%;
-  --accent-fg: 0 0% 90%;
+  --accent: 222 47% 14%;
+  --accent-fg: 210 40% 96%;
 
   --destructive: 0 72% 51%;
   --destructive-fg: 0 0% 100%;
@@ -168,3 +168,106 @@ body {
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: hsl(var(--border)); border-radius: 100px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-fg)); }
+
+/* ===================================
+   SWEETALERT2 CUSTOM OVERRIDES
+   (menggunakan CSS variables agar otomatis
+    mengikuti dark/light mode)
+=================================== */
+
+/* Backdrop blur */
+.swal2-backdrop-custom {
+  backdrop-filter: blur(6px) !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Popup box — background dan warna teks ikut CSS variable */
+.swal-popup-custom {
+  border-radius: 1rem !important;
+  border: 1px solid hsl(var(--border)) !important;
+  padding: 1.75rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Icon warna agar kontras di dark mode */
+.swal-popup-custom .swal2-icon {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Title dan body text */
+.swal-popup-custom .swal2-title {
+  color: hsl(var(--fg)) !important;
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  padding: 0 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.swal-popup-custom .swal2-html-container {
+  color: hsl(var(--muted-fg)) !important;
+  font-size: 0.9rem !important;
+  margin: 0 !important;
+}
+
+/* Tombol Primary (hijau) */
+.swal-btn-primary {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-fg)) !important;
+  border: none !important;
+  padding: 0.6rem 1.5rem !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s !important;
+  margin-top: 1rem !important;
+}
+.swal-btn-primary:hover {
+  opacity: 0.85 !important;
+}
+
+/* Tombol Destructive (merah) */
+.swal-btn-destructive {
+  background-color: hsl(var(--destructive)) !important;
+  color: hsl(var(--destructive-fg)) !important;
+  border: none !important;
+  padding: 0.6rem 1.5rem !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s !important;
+  flex: 1 !important;
+  margin: 0 !important;
+}
+.swal-btn-destructive:hover {
+  opacity: 0.85 !important;
+}
+
+/* Tombol Batal/Cancel */
+.swal-btn-cancel {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-fg)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  padding: 0.6rem 1.5rem !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s !important;
+  flex: 1 !important;
+  margin: 0 !important;
+}
+.swal-btn-cancel:hover {
+  opacity: 0.75 !important;
+}
+
+/* Container tombol konfirmasi — kiri kanan sejajar */
+.swal-actions-row {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0.75rem !important;
+  width: 100% !important;
+  margin-top: 1.5rem !important;
+  padding: 0 !important;
+}

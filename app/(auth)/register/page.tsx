@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
-import { AuthCard, AuthDivider } from "@/components/auth/auth-card"
-import { GoogleButton } from "@/components/auth/google-button"
-import { RegisterForm } from "@/components/auth/register-form"
+import { AuthCard, AuthDivider } from "@/components/features/auth/auth-card"
+import { GoogleButton } from "@/components/features/auth/google-button"
+import { RegisterForm } from "@/components/features/auth/register-form"
 
 export const metadata: Metadata = {
   title: "Daftar",

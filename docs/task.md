@@ -34,12 +34,18 @@ Dokumen ini memuat langkah pengerjaan E2E secara berurutan sesuai alur pengemban
 - [x] **[AGENT]** Implementasikan Middleware Next.js untuk memproteksi *private routes* (`/dashboard`, dll) dan redirect otomatis jika belum login.
 
 ## Fase 5: User Dashboard (Ruang Pribadi)
-- [ ] **[AGENT]** Bangun *Top Navbar* (`components/layout/top-navbar.tsx`) berisi Lonceng Notifikasi dan Profil.
-- [ ] **[AGENT]** Bangun *Sidebar User* (`components/layout/user-sidebar.tsx`) berisi: Dashboard, Workspaces, Assistant, Notes, History.
-- [ ] **[AGENT]** Terapkan layout di `app/(main)/layout.tsx`.
-- [ ] **[AGENT]** Buat halaman `/dashboard` yang menampilkan statistik dari database (Total Flashcards, dsb) dan *Feed* singkat dari Activity Logs.
+- [x] **[AGENT]** Bangun *Top Navbar* (`components/layout/top-navbar.tsx`) berisi Lonceng Notifikasi dan Profil.
+- [x] **[AGENT]** Bangun *Sidebar User* (`components/layout/user-sidebar.tsx`) berisi: Dashboard, Workspaces, Assistant, Notes, History.
+- [x] **[AGENT]** Terapkan layout di `app/(main)/layout.tsx`.
+- [x] **[AGENT]** Buat halaman `/dashboard` yang menampilkan statistik dari database (Total Flashcards, dsb) dan *Feed* singkat dari Activity Logs.
 
-## Fase 6: Admin Dashboard (Panel Kendali)
+## Fase 6: Core Fitur (Aktivitas Utama)
+- [x] **[AGENT]** Halaman **Workspaces**: CRUD ruang kerja belajar.
+- [ ] **[AGENT]** Halaman **Notes**: Integrasi Text Editor untuk catatan manual, simpan ke tabel `notes`.
+- [ ] **[AGENT]** Halaman **History**: Tabel/Timeline memanggil dari `activity_logs`.
+- [ ] **[AGENT]** Halaman **Assistant**: ChatBox AI. Jika diakses via sidebar, jalankan fungsi *Global Chat* (`workspace_id IS NULL`).
+
+## Fase 7: Admin Dashboard (Panel Kendali)
 - [ ] **[USER]** Masukkan `SUPABASE_SERVICE_ROLE_KEY` ke `.env.local`.
 - [ ] **[AGENT]** Buat `lib/supabase/admin.ts` untuk mem-bypass RLS.
 - [ ] **[AGENT]** Bangun *Sidebar Admin* (`components/layout/admin-sidebar.tsx`) berisi: Dashboard, Manage Users, Broadcast, System Config.
@@ -47,12 +53,6 @@ Dokumen ini memuat langkah pengerjaan E2E secara berurutan sesuai alur pengemban
 - [ ] **[AGENT]** Buat halaman `/admin/dashboard` yang menarik data *Global Stats* (Total Users seluruh platform, dll).
 - [ ] **[AGENT]** Buat `/admin/users` untuk merender tabel daftar semua pengguna dari tabel `users`.
 - [ ] **[AGENT]** Buat `/admin/broadcast` dengan form untuk mengirim Notifikasi massal (Insert ke tabel `notifications`).
-
-## Fase 7: Core Fitur (Aktivitas Utama)
-- [ ] **[AGENT]** Halaman **Workspaces**: CRUD ruang kerja belajar.
-- [ ] **[AGENT]** Halaman **Notes**: Integrasi Text Editor untuk catatan manual, simpan ke tabel `notes`.
-- [ ] **[AGENT]** Halaman **History**: Tabel/Timeline memanggil dari `activity_logs`.
-- [ ] **[AGENT]** Halaman **Assistant**: ChatBox AI. Jika diakses via sidebar, jalankan fungsi *Global Chat* (`workspace_id IS NULL`).
 
 ## Fase 8: Integrasi AI & Activity Logging
 - [ ] **[AGENT]** Buat Route Handlers `/api/generate` (Google Gemini JSON).
