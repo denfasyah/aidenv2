@@ -57,10 +57,7 @@ export function WorkspaceCard({ id, title, description, createdAt, isFavorite }:
   }
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-border bg-card overflow-hidden transition-all duration-200 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5">
-      {/* Card Top Accent */}
-      <div className="h-1 w-full bg-gradient-to-r from-primary/60 via-primary to-primary/60 opacity-0 group-hover:opacity-100 transition-opacity" />
-      
+    <div className="group relative flex flex-col rounded-2xl border border-border bg-card transition-all duration-200 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5">
       {/* Header */}
       <div className="p-4 flex items-start justify-between gap-2">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
@@ -88,7 +85,7 @@ export function WorkspaceCard({ id, title, description, createdAt, isFavorite }:
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-40">
               <DropdownMenuItem 
                 className="cursor-pointer gap-2"
                 onClick={(e) => {

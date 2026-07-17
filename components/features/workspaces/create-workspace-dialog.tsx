@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label"
 import { createWorkspace } from "@/app/(main)/workspaces/actions"
 import { showAlert } from "@/lib/swal"
 
+import { useRouter } from "next/navigation"
+
 function SubmitButton() {
   const { pending } = useFormStatus()
   return (
@@ -37,41 +39,49 @@ export function CreateWorkspaceDialog() {
   const [open, setOpen] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
   const resetForm = () => {
     setSelectedFile(null)
     setDragActive(false)
+    setFormError(null)
     if (inputRef.current) inputRef.current.value = ""
   }
 
+  const openFilePicker = () => {
+    inputRef.current?.click()
+  }
+
   async function handleAction(formData: FormData) {
+    setFormError(null)
     const result = await createWorkspace(formData)
+    
     if (result?.error) {
-      showAlert.error("Gagal", result.error)
+      setFormError(result.error)
     } else {
       showAlert.success("Berhasil", "Workspace baru telah dibuat!")
       setOpen(false)
       resetForm()
+      router.push("/workspaces") // Reset filter
     }
   }
 
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
-    } else if (e.type === "dragleave") {
-      setDragActive(false)
-    }
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true)
+    else if (e.type === "dragleave") setDragActive(false)
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
+    setFormError(null)
     const files = e.dataTransfer.files
-    if (files && files[0]) {
+    if (files?.[0]) {
       const file = files[0]
       if (file.type === "application/pdf") {
         setSelectedFile(file)
@@ -81,7 +91,7 @@ export function CreateWorkspaceDialog() {
           inputRef.current.files = dt.files
         }
       } else {
-        showAlert.error("Format Salah", "Hanya file PDF yang diperbolehkan.")
+        setFormError("Format Salah. Hanya file PDF yang diperbolehkan.")
       }
     }
   }
@@ -97,19 +107,26 @@ export function CreateWorkspaceDialog() {
           Workspace Baru
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[440px] p-6">
+        <DialogHeader className="mb-2">
           <DialogTitle className="flex items-center gap-2">
             <FolderKanban className="h-5 w-5 text-primary" />
             Buat Workspace Baru
           </DialogTitle>
-          <DialogDescription>
-            Upload materi PDF Anda. AI akan menggunakan dokumen ini sebagai konteks untuk menghasilkan flashcard, kuis, dan ringkasan.
+          <DialogDescription className="text-sm">
+            Upload materi PDF Anda. AI akan menggunakan dokumen ini sebagai konteks pembelajaran.
           </DialogDescription>
         </DialogHeader>
         
-        <form action={handleAction} className="flex flex-col gap-4 py-2">
-          <div className="flex flex-col gap-2">
+        <form action={handleAction} className="flex flex-col gap-4 w-full min-w-0">
+          {formError && (
+            <div className="p-3 rounded-lg bg-destructive/15 text-destructive text-sm font-medium border border-destructive/20 flex items-start gap-2 w-full">
+              <X className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span className="flex-1 min-w-0 break-words">{formError}</span>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 w-full">
             <Label htmlFor="title">Judul Workspace <span className="text-destructive">*</span></Label>
             <Input 
               id="title" 
@@ -117,49 +134,48 @@ export function CreateWorkspaceDialog() {
               placeholder="Contoh: Matematika Dasar" 
               required 
               maxLength={50}
+              className="w-full"
             />
           </div>
           
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 w-full">
             <Label htmlFor="description">Deskripsi (Opsional)</Label>
             <Textarea 
               id="description" 
               name="description" 
               placeholder="Topik utama yang akan dipelajari..." 
-              className="resize-none h-20"
+              className="resize-none h-20 w-full"
               maxLength={200}
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="file">
+          <div className="flex flex-col gap-2 w-full">
+            <Label>
               Upload PDF Materi <span className="text-destructive">*</span>
-              <span className="text-muted-foreground font-normal ml-1">(Wajib untuk konteks AI)</span>
+              <span className="text-muted-foreground font-normal ml-1">(Wajib)</span>
             </Label>
 
-            {/* Hidden file input — dijalankan hanya via label atau drag-drop, BUKAN klik div */}
+            {/* Hidden native input — TIDAK dihubungkan ke label manapun untuk menghindari bug click-through */}
             <input 
-              id="file"
               name="file" 
               type="file" 
               accept="application/pdf"
               className="sr-only"
               ref={inputRef}
+              tabIndex={-1}
               onChange={(e) => {
-                if (e.target.files?.[0]) {
-                  setSelectedFile(e.target.files[0])
-                }
+                if (e.target.files?.[0]) setSelectedFile(e.target.files[0])
               }}
             />
 
-            {/* Drop Zone — klik via <label htmlFor="file"> agar tidak ada bubble aneh */}
+            {/* Drop Zone — events drag only, click handled via button di dalam */}
             <div 
-              className={`relative border-2 border-dashed rounded-xl transition-all duration-200 
+              className={`border-2 border-dashed rounded-xl transition-all duration-200 w-full min-w-0
                 ${dragActive 
-                  ? 'border-primary bg-primary/10 scale-[1.01]' 
+                  ? 'border-primary bg-primary/10' 
                   : selectedFile 
-                    ? 'border-primary/70 bg-primary/5'
-                    : 'border-border hover:border-primary/50 hover:bg-accent/30'
+                    ? 'border-primary/60 bg-primary/5'
+                    : 'border-border'
                 }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -167,9 +183,9 @@ export function CreateWorkspaceDialog() {
               onDrop={handleDrop}
             >
               {selectedFile ? (
-                <div className="flex items-center gap-3 p-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-3 p-3 w-full min-w-0">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
@@ -190,12 +206,21 @@ export function CreateWorkspaceDialog() {
                   </button>
                 </div>
               ) : (
-                // Gunakan <label> agar klik hanya trigger input[file], tidak bubble ke komponen lain
-                <label htmlFor="file" className="flex flex-col items-center gap-2 py-8 px-4 cursor-pointer">
-                  <UploadCloud className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm font-medium">Klik atau seret file PDF ke sini</p>
-                  <p className="text-xs text-muted-foreground">Maks. 50MB · Hanya format .pdf</p>
-                </label>
+                <div className="flex flex-col items-center gap-2 py-4 px-4">
+                  <UploadCloud className="h-6 w-6 text-muted-foreground" />
+                  <div className="text-center">
+                    <p className="text-[13px] font-medium">Seret file PDF ke sini</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">atau</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openFilePicker}
+                    className="px-3 py-1 text-xs font-medium rounded-lg border border-border hover:border-primary/50 hover:bg-accent transition-colors"
+                  >
+                    Pilih dari komputer
+                  </button>
+                  <p className="text-[11px] text-muted-foreground mt-1">Maks. 50MB · Hanya .pdf</p>
+                </div>
               )}
             </div>
           </div>

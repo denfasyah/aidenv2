@@ -39,8 +39,8 @@ export default async function WorkspacesPage({ searchParams }: PageProps) {
   } else if (sort === "az") {
     query = query.order("title", { ascending: true })
   } else if (sort === "favorite") {
-    // Jika kolom is_favorite belum ada, fallback ke newest
-    query = query.order("is_favorite", { ascending: false }).order("created_at", { ascending: false })
+    // Filter hanya yang difavoritkan
+    query = query.eq("is_favorite", true).order("created_at", { ascending: false })
   } else {
     // newest (default)
     query = query.order("created_at", { ascending: false })
@@ -93,19 +93,29 @@ export default async function WorkspacesPage({ searchParams }: PageProps) {
           Gagal memuat workspaces: {error.message}
         </div>
       ) : !workspaces || workspaces.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-16 text-center border border-dashed rounded-2xl bg-card/50 min-h-[320px] gap-4">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-            <FolderKanban className="h-8 w-8" />
+        <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-border border-dashed bg-card/50 min-h-[320px]">
+          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+            <FolderKanban className="h-6 w-6 text-muted-foreground" />
           </div>
+          
           {search ? (
             <>
-              <h3 className="text-lg font-semibold text-foreground">Tidak ada hasil untuk &quot;{search}&quot;</h3>
-              <p className="text-sm text-muted-foreground max-w-sm">Coba gunakan kata kunci yang berbeda.</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Pencarian Tidak Ditemukan</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Tidak ada workspace yang cocok dengan kata kunci "{search}".
+              </p>
+            </>
+          ) : sort === "favorite" ? (
+            <>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Belum Ada Favorit</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Anda belum memfavoritkan workspace apa pun. Klik ikon bintang pada workspace untuk menambahkannya.
+              </p>
             </>
           ) : (
             <>
-              <h3 className="text-lg font-semibold text-foreground">Belum ada Workspace</h3>
-              <p className="text-sm text-muted-foreground max-w-sm mb-2">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Belum ada Workspace</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
                 Mulai perjalanan belajar Anda dengan membuat workspace pertama dan upload materi PDF.
               </p>
               <CreateWorkspaceDialog />
