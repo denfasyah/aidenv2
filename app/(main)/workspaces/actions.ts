@@ -21,6 +21,11 @@ export async function createWorkspace(formData: FormData) {
     return { error: "Hanya file berformat PDF yang diperbolehkan." }
   }
 
+  // Batasi ukuran file (misal 10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    return { error: "Ukuran file terlalu besar. Maksimal 10MB." }
+  }
+
   const supabase = (await createClient()) as any
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -42,13 +47,19 @@ export async function createWorkspace(formData: FormData) {
 
   // Upload file PDF ke storage
   const fileName = `${user.id}/${workspace.id}/${Date.now()}_${file.name}`
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  
   const { error: uploadError } = await supabase.storage
     .from("materials")
-    .upload(fileName, file)
+    .upload(fileName, buffer, {
+      contentType: file.type,
+      upsert: true
+    })
 
   if (uploadError) {
     console.error("Error uploading file:", uploadError.message)
-    // Tetap success, tapi log error storage
+    return { error: `Gagal mengunggah file: ${uploadError.message}` }
   }
 
   // Log aktivitas

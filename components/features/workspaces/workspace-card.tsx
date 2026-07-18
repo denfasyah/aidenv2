@@ -137,12 +137,12 @@ export function WorkspaceCard({ id, title, description, createdAt, isFavorite }:
       </div>
 
       {/* Footer: Start Learning Button */}
-      <div className="p-4 pt-3">
-        <Link href={`/workspaces/${id}`} className="block">
-          <button className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 active:scale-95 transition-all duration-150 shadow-sm shadow-primary/20">
+      <div className="p-4 pt-3 mt-auto">
+        <Link href={`/workspaces/${id}`}>
+          <Button className="w-full gap-2 rounded-xl font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm group-hover:shadow transition-all">
             <Play className="h-4 w-4 fill-current" />
             Start Learning
-          </button>
+          </Button>
         </Link>
       </div>
     </div>
