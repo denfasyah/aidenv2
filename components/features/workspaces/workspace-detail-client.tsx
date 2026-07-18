@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   ArrowLeft, FileText, MessageSquare, BookOpen, BrainCircuit, CheckSquare, Sparkles
@@ -36,23 +36,43 @@ const TABS = [
   { id: "quiz",      label: "QUIZ",      icon: CheckSquare },
 ] as const
 
+const TAB_STORAGE_KEY = (id: string) => `aiden_tab_${id}`
+
 // ─────────────────────────── Main Component ───────────────────────────────────
 
 export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailClientProps) {
+  // Always start with "content" on server to avoid hydration mismatch.
+  // After mount, restore the saved tab from localStorage.
   const [activeTab, setActiveTab] = useState<TabType>("content")
+  const [mounted, setMounted] = useState(false)
 
   const formattedDate = format(new Date(workspace.created_at), "dd MMM yyyy", { locale: localeId })
   const formattedSize = fileInfo ? (fileInfo.size / 1024 / 1024).toFixed(2) : "0"
 
+  // Restore saved tab after hydration completes (client-only)
+  useEffect(() => {
+    setMounted(true)
+    try {
+      const saved = localStorage.getItem(TAB_STORAGE_KEY(workspace.id)) as TabType | null
+      if (saved && TABS.some(t => t.id === saved)) {
+        setActiveTab(saved)
+      }
+    } catch {
+      // ignore - private mode / storage unavailable
+    }
+  }, [workspace.id])
+
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab)
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY(workspace.id), tab)
+    } catch { /* ignore */ }
+  }
+
   return (
-    /**
-     * Using a fixed-height flex column so the tab card fills the viewport
-     * without allowing the page itself to scroll. All internal scrolling
-     * happens inside each panel independently.
-     */
     <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] -m-4 sm:-m-8">
 
-      {/* ── Header & Metadata ─────────────────────────────────────────────── */}
+      {/* ── Compact Header ────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-4 sm:px-8 pt-3 pb-2 flex-shrink-0">
         <Link
           href="/workspaces"
@@ -68,7 +88,7 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
           </div>
           <div className="flex items-center gap-2 min-w-0">
             <h1 className="text-sm font-bold text-foreground truncate">{workspace.title}</h1>
-            <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground flex-wrap flex-shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground flex-shrink-0">
               <span suppressHydrationWarning>{formattedDate}</span>
               <span className="text-border">•</span>
               <span className="font-bold text-primary uppercase">PDF</span>
@@ -88,11 +108,11 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
       {/* ── Tabs Navigation ───────────────────────────────────────────────── */}
       <div className="flex items-center gap-1 border-b border-border overflow-x-auto flex-shrink-0 px-4 sm:px-8">
         {TABS.map(({ id, label, icon: Icon }) => {
-          const isActive = activeTab === id
+          const isActive = mounted ? activeTab === id : id === "content"
           return (
             <button
               key={id}
-              onClick={() => setActiveTab(id as TabType)}
+              onClick={() => handleTabChange(id as TabType)}
               className={`
                 flex items-center gap-2 px-5 py-3 text-xs font-bold tracking-wider uppercase transition-all whitespace-nowrap border-b-2
                 ${isActive
@@ -108,12 +128,7 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
         })}
       </div>
 
-      {/* ── Tab Panels ────────────────────────────────────────────────────── */}
-      {/**
-       * KEY TECHNIQUE: All panels are always rendered (never unmounted),
-       * but only the active one is visible. This preserves React state (chat history)
-       * when the user switches between tabs.
-       */}
+      {/* ── Tab Panels (all kept alive to preserve state) ─────────────────── */}
       <div className="flex-1 min-h-0 mx-4 sm:mx-8 my-4 bg-card border border-border rounded-2xl overflow-hidden shadow-sm relative">
 
         {/* Content (PDF Viewer) */}
@@ -126,7 +141,7 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
           <AIChatPanel workspaceId={workspace.id} fileUrl={fileInfo?.url} />
         </div>
 
-        {/* Coming Soon placeholder for Summary / Flashcard / Quiz */}
+        {/* Coming Soon — Summary / Flashcard / Quiz */}
         {(["summary", "flashcard", "quiz"] as const).map((id) => (
           <div
             key={id}
@@ -137,7 +152,7 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
             </div>
             <p className="text-lg font-medium text-foreground mb-2">Coming Soon</p>
             <p className="max-w-md text-sm">
-              Fitur {id.toUpperCase()} sedang dalam tahap pengembangan dan akan segera hadir dengan keajaiban AI.
+              Fitur {id.toUpperCase()} sedang dalam tahap pengembangan.
             </p>
           </div>
         ))}
