@@ -84,6 +84,10 @@ export function CreateWorkspaceDialog() {
     if (files?.[0]) {
       const file = files[0]
       if (file.type === "application/pdf") {
+        if (file.size > 10 * 1024 * 1024) {
+          setFormError("Ukuran file terlalu besar. Maksimal 10MB.")
+          return
+        }
         setSelectedFile(file)
         if (inputRef.current) {
           const dt = new DataTransfer()
@@ -164,7 +168,16 @@ export function CreateWorkspaceDialog() {
               ref={inputRef}
               tabIndex={-1}
               onChange={(e) => {
-                if (e.target.files?.[0]) setSelectedFile(e.target.files[0])
+                const file = e.target.files?.[0]
+                if (file) {
+                  if (file.size > 10 * 1024 * 1024) {
+                    setFormError("Ukuran file terlalu besar. Maksimal 10MB.")
+                    if (inputRef.current) inputRef.current.value = ""
+                    return
+                  }
+                  setSelectedFile(file)
+                  setFormError(null)
+                }
               }}
             />
 
@@ -219,7 +232,7 @@ export function CreateWorkspaceDialog() {
                   >
                     Pilih dari komputer
                   </button>
-                  <p className="text-[11px] text-muted-foreground mt-1">Maks. 50MB · Hanya .pdf</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Maks. 10MB · Hanya .pdf</p>
                 </div>
               )}
             </div>
