@@ -37,7 +37,7 @@ Setiap task wajib melalui 4 tahap pengerjaan: **UI/UX Design**, **API & DB Integ
 ---
 
 ### 📌 TASK 2: Workspace Detail — Tab Flashcards (AI Flashcard Generator)
-- [ ] **[AGENT] Fitur AI Flashcards & Flip Card Viewer**
+- [x] **[AGENT] Fitur AI Flashcards & Flip Card Viewer**
   - 🎨 **Design:** UI Tab `FLASHCARD` di Workspace Detail. Flashcard Viewer interaktif (Flip animation depan/belakang, Progress indicator "Card 3 of 10", Next/Prev control, Shuffle mode).
   - ⚡ **API & DB:** 
     - API Route `/api/generate/flashcards` (Gemini API Structured JSON Array `[{ front, back }]`).

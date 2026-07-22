@@ -12,6 +12,7 @@ import { id as localeId } from "date-fns/locale"
 import { PDFViewerPanel } from "@/components/features/pdf-viewer/PDFViewerPanel"
 import { AIChatPanel } from "@/components/features/ai-chat/AIChatPanel"
 import { SummaryPanel } from "@/components/features/summary/SummaryPanel"
+import { FlashcardPanel } from "@/components/features/flashcards/FlashcardPanel"
 
 // ─────────────────────────── Types ────────────────────────────────────────────
 
@@ -158,21 +159,25 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
           />
         </div>
 
-        {/* Coming Soon — Flashcard / Quiz */}
-        {(["flashcard", "quiz"] as const).map((id) => (
-          <div
-            key={id}
-            className={`absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-8 text-center bg-muted/10 ${activeTab === id ? "block" : "hidden"}`}
-          >
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-              <Sparkles className="h-8 w-8 text-primary opacity-50" />
-            </div>
-            <p className="text-lg font-medium text-foreground mb-2">Coming Soon</p>
-            <p className="max-w-md text-sm">
-              Fitur {id.toUpperCase()} sedang dalam tahap pengembangan.
-            </p>
+        {/* Flashcard AI */}
+        <div className={`absolute inset-0 ${activeTab === "flashcard" ? "block" : "hidden"}`}>
+          <FlashcardPanel
+            workspaceId={workspace.id}
+            workspaceTitle={workspace.title}
+            fileUrl={fileInfo?.url}
+          />
+        </div>
+
+        {/* Coming Soon — Quiz */}
+        <div className={`absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-8 text-center bg-muted/10 ${activeTab === "quiz" ? "block" : "hidden"}`}>
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <Sparkles className="h-8 w-8 text-primary opacity-50" />
           </div>
-        ))}
+          <p className="text-lg font-medium text-foreground mb-2">Coming Soon</p>
+          <p className="max-w-md text-sm">
+            Fitur QUIZ sedang dalam tahap pengembangan.
+          </p>
+        </div>
       </div>
     </div>
   )
