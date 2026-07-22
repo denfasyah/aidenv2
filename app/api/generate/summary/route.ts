@@ -88,8 +88,9 @@ Rangkuman penutup gaya Aiden yang kasual — singkat, padat, bikin semangat.
 ATURAN KETAT:
 1. Hanya rangkum dari dokumen yang dilampirkan, ga boleh ngarang.
 2. WAJIB cantumkan rujukan nomor halaman dokumen (misal: "(Hal. 2)" atau "[Halaman 3-5]") di setiap poin pembahasan/konsep utama agar sumbernya super transparan.
-3. Gunakan Markdown murni: **bold**, bullet list (- ), numbered list, blockquote (>), heading (###). JANGAN pakai tag HTML.
-4. Bahasa Indonesia gaul tapi tetap informatif dan mudah dipahami.`
+3. WAJIB selesaikan seluruh bagian dari judul, Konsep Utama, Penjelasan Detail, Konsep Diingat, hingga ✅ Takeaway. Dilarang berhenti/terpotong di tengah jalan.
+4. Gunakan Markdown murni: **bold**, bullet list (- ), numbered list, blockquote (>), heading (###). JANGAN pakai tag HTML.
+5. Bahasa Indonesia gaul tapi tetap informatif dan mudah dipahami.`
 
     const promptMessages: any[] = []
     if (pdfContent) {
@@ -98,7 +99,7 @@ ATURAN KETAT:
         content: [
           {
             type: "text",
-            text: `Halo Aiden! Tolong buatkan ringkasan materi komprehensif dari dokumen "${workspaceTitle}" ini ya!`,
+            text: `Halo Aiden! Tolong buatkan ringkasan materi komprehensif dan LENGKAP dari seluruh isi dokumen "${workspaceTitle}" ini ya!`,
           },
           pdfContent,
         ],
@@ -110,13 +111,13 @@ ATURAN KETAT:
       })
     }
 
-    // 4. Generate Summary via Gemini API (optimized for speed)
+    // 4. Generate Summary via Gemini API
     const { text: summaryText } = await generateText({
       model: google(CHAT_MODEL),
       system: systemInstruction,
       messages: promptMessages,
       temperature: 0.3,
-      maxTokens: 2048,
+      maxTokens: 8192,
     })
 
     let savedSummary: any = null
