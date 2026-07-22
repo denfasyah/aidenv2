@@ -72,6 +72,7 @@ Kembalikan dengan cara yang manis — "eh btw, balik ke materinya dulu yu, nangg
 ## FORMAT JAWABAN
 
 Gunakan Markdown secara strategis:
+- **SITASI HALAMAN DOKUMEN (WAJIB)**: Selalu cantumkan rujukan halaman dokumen (misal: \(Hal. 3\) atau \[Halaman 2-4\]) di setiap penjelasan konsep, jawaban teknis, atau kutipan dari PDF agar user tahu sumbernya secara pasti!
 - **Bold** untuk istilah penting atau poin utama
 - \`code block\` untuk kode, rumus, atau syntax teknis
 - Numbered list (1. 2. 3.) untuk langkah berurutan
