@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import {
   ArrowLeft, FileText, MessageSquare, BookOpen, BrainCircuit, CheckSquare, Sparkles
 } from "lucide-react"
@@ -10,6 +11,7 @@ import { id as localeId } from "date-fns/locale"
 
 import { PDFViewerPanel } from "@/components/features/pdf-viewer/PDFViewerPanel"
 import { AIChatPanel } from "@/components/features/ai-chat/AIChatPanel"
+import { SummaryPanel } from "@/components/features/summary/SummaryPanel"
 
 // ─────────────────────────── Types ────────────────────────────────────────────
 
@@ -41,26 +43,32 @@ const TAB_STORAGE_KEY = (id: string) => `aiden_tab_${id}`
 // ─────────────────────────── Main Component ───────────────────────────────────
 
 export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailClientProps) {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab") as TabType | null
+
   // Always start with "content" on server to avoid hydration mismatch.
-  // After mount, restore the saved tab from localStorage.
   const [activeTab, setActiveTab] = useState<TabType>("content")
   const [mounted, setMounted] = useState(false)
 
   const formattedDate = format(new Date(workspace.created_at), "dd MMM yyyy", { locale: localeId })
   const formattedSize = fileInfo ? (fileInfo.size / 1024 / 1024).toFixed(2) : "0"
 
-  // Restore saved tab after hydration completes (client-only)
+  // Restore saved tab from URL or localStorage after mount
   useEffect(() => {
     setMounted(true)
+    if (tabParam && TABS.some(t => t.id === tabParam)) {
+      setActiveTab(tabParam)
+      return
+    }
     try {
       const saved = localStorage.getItem(TAB_STORAGE_KEY(workspace.id)) as TabType | null
       if (saved && TABS.some(t => t.id === saved)) {
         setActiveTab(saved)
       }
     } catch {
-      // ignore - private mode / storage unavailable
+      // ignore
     }
-  }, [workspace.id])
+  }, [workspace.id, tabParam])
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab)
@@ -141,8 +149,17 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
           <AIChatPanel workspaceId={workspace.id} fileUrl={fileInfo?.url} />
         </div>
 
-        {/* Coming Soon — Summary / Flashcard / Quiz */}
-        {(["summary", "flashcard", "quiz"] as const).map((id) => (
+        {/* Summary AI */}
+        <div className={`absolute inset-0 ${activeTab === "summary" ? "block" : "hidden"}`}>
+          <SummaryPanel
+            workspaceId={workspace.id}
+            workspaceTitle={workspace.title}
+            fileUrl={fileInfo?.url}
+          />
+        </div>
+
+        {/* Coming Soon — Flashcard / Quiz */}
+        {(["flashcard", "quiz"] as const).map((id) => (
           <div
             key={id}
             className={`absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-8 text-center bg-muted/10 ${activeTab === id ? "block" : "hidden"}`}
