@@ -1,72 +1,108 @@
-# Daftar Tugas (Task List) - Aiden v2 (Kronologis)
+# Daftar Tugas (Task List) - Aiden v2 (Detail & Terstruktur)
 
 Dokumen ini memuat langkah pengerjaan E2E secara berurutan sesuai alur pengembangan (Development Flow).
+Setiap task wajib melalui 4 tahap pengerjaan: **UI/UX Design**, **API & DB Integration**, **State & Logic Handling**, serta **Testing & Verification**.
 
-## Fase 1: Setup Infrastruktur & Database
-- [x] **[AGENT]** Inisialisasi Next.js, Tailwind, dan utilitas dasar.
-- [ x] **[USER]** Jalankan skrip `supabase-schema.sql` terbaru di SQL Editor (Berisi 10 tabel, termasuk perubahan `users`).
-- [x] **[AGENT]** Buat ulang `types/database.types.ts` agar selaras dengan tabel `users` yang baru.
+---
 
-## Fase 2: Sistem Desain Visual & Komponen UI Inti
-- [x] **[AGENT]** Konfigurasi `app/globals.css` untuk warna Primary Green dan dukungan Dark/Light mode (CSS Variables penuh).
-- [x] **[AGENT]** Setup `providers/theme-provider.tsx`, `lib/utils.ts`, dan `components/layout/theme-toggle.tsx`.
-- [x] **[AGENT]** Rakit UI Components dasar (`Button`, `Input`, `Textarea`, `Card`, `Badge`, `Separator`) di `components/ui/index.tsx`.
-- [x] **[AGENT]** Buat komponen Skeleton (`components/ui/skeleton.tsx`): StatCard, TableRow, Activity, WorkspaceCard, ChatMessage.
-- [x] **[AGENT]** Buat halaman `app/loading.tsx` (global loading state).
-- [x] **[AGENT]** Buat halaman `app/not-found.tsx` (halaman 404).
+## 🟢 Selesai (Completed Tasks)
 
-## Fase 3: Landing Page (Halaman Utama)
-- [x] **[AGENT]** Desain Navbar sticky dengan backdrop blur, logo, link navigasi, dan ThemeToggle.
-- [x] **[AGENT]** Desain Hero Section (`app/page.tsx`) dengan badge, headline, subheading, dan CTA buttons.
-- [x] **[AGENT]** Desain Features Section (6 kartu fitur dalam grid responsif).
-- [x] **[AGENT]** Desain "How It Works" Section (4 langkah).
-- [x] **[AGENT]** Desain CTA Section dan Footer.
+- [x] **Fase 1: Setup Infrastruktur & Database**
+  - Schema Supabase (10 tabel), Types Generator, Next.js & Tailwind setup.
+- [x] **Fase 2: Sistem Desain Visual & Komponen UI Inti**
+  - Dark/Light Theme Provider, Base UI Components (Button, Card, Badge, Input, Skeleton, Modal).
+- [x] **Fase 3: Landing Page (Halaman Utama)**
+  - Navbar, Hero, Features, How It Works, CTA, Footer.
+- [x] **Fase 4: Autentikasi (Supabase Auth)**
+  - OAuth Google + Email/Password Login/Register, Middleware Protected Routes, Auth Callbacks.
+- [x] **Fase 5: User Dashboard (Ruang Personal)**
+  - Top Navbar, Sidebar, Overview Stats, Feed Activity Log.
+- [x] **Fase 6.1: Workspaces & Workspace Detail**
+  - CRUD Workspaces, Document Upload, Workspace Layout, PDF Viewer, dan Workspace AI Chat Panel (Client-side cache).
 
-## Fase 4: Autentikasi (Supabase Auth)
-- [x] **[USER]** Setup proyek Supabase.
-- [x] **[USER]** Setup Google OAuth Client ID & Secret di GCP.
-- [x] **[USER]** Konfigurasi Google Provider di dashboard Supabase.
-- [x] **[USER]** Setup `.env.local` dengan anon key & url Supabase.
-- [x] **[AGENT]** Buat instance klien Supabase (`client`, `server`, dan `middleware`).
-- [x] **[AGENT]** Buat halaman Login (`/login`) dengan desain modern (mendukung form & tombol OAuth).
-- [x] **[AGENT]** Buat halaman Register (`/register`) (form & tombol OAuth).
-- [x] **[AGENT]** Buat Auth Callback Handler untuk memproses token OAuth ke sesi.
-- [x] **[AGENT]** Implementasikan Middleware Next.js untuk memproteksi *private routes* (`/dashboard`, dll) dan redirect otomatis jika belum login.
+---
 
-## Fase 5: User Dashboard (Ruang Pribadi)
-- [x] **[AGENT]** Bangun *Top Navbar* (`components/layout/top-navbar.tsx`) berisi Lonceng Notifikasi dan Profil.
-- [x] **[AGENT]** Bangun *Sidebar User* (`components/layout/user-sidebar.tsx`) berisi: Dashboard, Workspaces, Assistant, Notes, History.
-- [x] **[AGENT]** Terapkan layout di `app/(main)/layout.tsx`.
-- [x] **[AGENT]** Buat halaman `/dashboard` yang menampilkan statistik dari database (Total Flashcards, dsb) dan *Feed* singkat dari Activity Logs.
+## 🟡 Task Mendatang (Next Implementation Checklist)
 
-## Fase 6: Core Fitur (Aktivitas Utama)
-- [x] **[AGENT]** Halaman **Workspaces**: CRUD ruang kerja belajar.
-- [ ] **[AGENT]** Halaman **Notes**: Integrasi Text Editor untuk catatan manual, simpan ke tabel `notes`.
-- [ ] **[AGENT]** Halaman **History**: Tabel/Timeline memanggil dari `activity_logs`.
-- [ ] **[AGENT]** Halaman **Assistant**: ChatBox AI. Jika diakses via sidebar, jalankan fungsi *Global Chat* (`workspace_id IS NULL`).
+### 📌 TASK 1: Workspace Detail — Tab Summary (AI Summary Generator)
+- [x] **[AGENT] Fitur AI Summary & History Persistence**
+  - 🎨 **Design:** UI Tab `SUMMARY` di Workspace Detail. Tampilan Markdown Rapi (Heading, Key Points, Bullet List), Tombol "Generate / Re-generate Summary", Tombol Copy Text & Save to Notes.
+  - ⚡ **API & DB:** 
+    - API Route `/api/generate/summary` (Gemini API membaca PDF workspace).
+    - Simpan ke tabel `summaries` (Upsert per `workspace_id`).
+    - **History Upsert:** Insert log di `activity_logs` dengan `target_url: /workspaces/[id]?tab=summary`.
+  - 🔄 **State:** Auto-load summary jika sudah pernah di-generate, state loading skeleton saat AI merangkum.
+  - 🧪 **Testing:** Generate summary, refresh page (data tetap ada), klik "Save to Notes" tersimpan di `notes` table.
 
-## Fase 7: Admin Dashboard (Panel Kendali)
-- [ ] **[USER]** Masukkan `SUPABASE_SERVICE_ROLE_KEY` ke `.env.local`.
-- [ ] **[AGENT]** Buat `lib/supabase/admin.ts` untuk mem-bypass RLS.
-- [ ] **[AGENT]** Bangun *Sidebar Admin* (`components/layout/admin-sidebar.tsx`) berisi: Dashboard, Manage Users, Broadcast, System Config.
-- [ ] **[AGENT]** Terapkan layout di `app/(admin)/layout.tsx`.
-- [ ] **[AGENT]** Buat halaman `/admin/dashboard` yang menarik data *Global Stats* (Total Users seluruh platform, dll).
-- [ ] **[AGENT]** Buat `/admin/users` untuk merender tabel daftar semua pengguna dari tabel `users`.
-- [ ] **[AGENT]** Buat `/admin/broadcast` dengan form untuk mengirim Notifikasi massal (Insert ke tabel `notifications`).
+---
 
-## Fase 8: Integrasi AI & Activity Logging
-- [ ] **[AGENT]** Buat Route Handlers `/api/generate` (Google Gemini JSON).
-- [ ] **[AGENT]** Logika Database Transaksional: Simpan hasil AI ke `flashcards`/`quizzes` sekaligus simpan riwayat ke `activity_logs` di waktu yang sama.
-- [ ] **[AGENT]** Buat komponen *Flashcard Viewer* untuk men-render JSON dari database ke antarmuka pengguna.
-- [ ] **[AGENT]** Buat Route Handlers `/api/chat` (Streaming AI Response).
+### 📌 TASK 2: Workspace Detail — Tab Flashcards (AI Flashcard Generator)
+- [ ] **[AGENT] Fitur AI Flashcards & Flip Card Viewer**
+  - 🎨 **Design:** UI Tab `FLASHCARD` di Workspace Detail. Flashcard Viewer interaktif (Flip animation depan/belakang, Progress indicator "Card 3 of 10", Next/Prev control, Shuffle mode).
+  - ⚡ **API & DB:** 
+    - API Route `/api/generate/flashcards` (Gemini API Structured JSON Array `[{ front, back }]`).
+    - Simpan ke tabel `flashcards` (Upsert per `workspace_id`).
+    - **History Upsert:** Insert/Update log di `activity_logs` dengan `target_url: /workspaces/[id]?tab=flashcard`.
+  - 🔄 **State:** Card flip state (IsFlipped), active card index state, state loading skeleton generator.
+  - 🧪 **Testing:** Generate 10 flashcards, bolak-balik kartu, refresh & buka via link `/history?tab=flashcard`.
 
-## Fase 9: Testing & Bug Fixes
-- [ ] **[USER / AGENT]** Pengujian alur (Buat akun -> Akses Dashboard User -> Jadikan akun tersebut Admin di DB -> Akses Dashboard Admin).
-- [ ] **[AGENT]** Pengecekan responsivitas UI dan warna Dark Mode.
-- [ ] **[AGENT]** Resolusi peringatan TypeScript/Linting.
+---
 
-## Fase 10: Deployment
-- [ ] **[USER]** Inisialisasi Git dan Push ke GitHub/GitLab.
-- [ ] **[USER]** Hubungkan repo ke **Vercel**.
-- [ ] **[USER]** Tambahkan seluruh Environment Variables di setting Vercel (`URL`, `Anon Key`, `Service Role`, `Gemini API`).
-- [ ] **[USER/AGENT]** Verifikasi produksi (astikan OAuth Redirect URL mengarah ke URL Vercel).
+### 📌 TASK 3: Workspace Detail — Tab Quiz & Attempt History
+- [ ] **[AGENT] Fitur Interactive Quiz & Attempt Logs**
+  - 🎨 **Design:** 
+    - UI Tab `QUIZ` di Workspace Detail. 
+    - **Quiz Runner:** Tampilan soal pilihan ganda (Radio options, instant feedback penjelasan jawaban benar/salah, submit quiz).
+    - **Quiz Result Modal/View:** Tampilan skor akhir (misal: "80/100 - Bagus Sekali!"), review jawaban.
+    - **Attempt List:** Daftar riwayat attempt di dalam tab Quiz ("Attempt #1 - 80%", "Attempt #2 - 100%").
+  - ⚡ **API & DB:** 
+    - API Route `/api/generate/quiz` (Gemini API Structured JSON).
+    - Simpan kuis ke `quizzes` table.
+    - **Attempt-Based History (Khusus Quiz):** Setiap kali kuis diselesaikan, buat entry log BARU di `activity_logs` dengan `target_url: /workspaces/[id]?tab=quiz&attempt_id=[ATTEMPT_ID]` agar user bisa melihat skor attempt spesifik dari `/history`.
+  - 🔄 **State:** Selected answer per question, submission state, score calculation, state viewer attempt lama.
+  - 🧪 **Testing:** Kerjakan kuis 2x, pastikan di `/history` muncul 2 attempt terpisah yang masing-masing menunjukkan hasil/skornya saat diklik.
+
+---
+
+### 📌 TASK 4: Synchronized Activity Logs & Link Routing (`/history`)
+- [ ] **[AGENT] Centralized History Page dengan Deep Linking**
+  - 🎨 **Design:** Halaman `/history` dengan UI Vertical Timeline & Direct Tab Links.
+  - ⚡ **API & DB:** Query data dari `activity_logs` (Workspace, Chat, Summary, Flashcard, Quiz Attempt, Notes).
+  - 🔄 **State:** URL Tab Switcher (saat user buka `/workspaces/[id]?tab=flashcard`, tab langsung aktif ke `flashcard`).
+  - 🧪 **Testing:** Klik link dari item History (Summary, Flashcard, Quiz Attempt), verifikasi halaman terbuka langsung di Tab & data yang sesuai.
+
+---
+
+### 📌 TASK 5: Global Assistant (`/assistant`) & Persistent DB Chat
+- [ ] **[AGENT] Global AI Chat & Database Persistence**
+  - 🎨 **Design:** Layout full-screen chat di `/assistant` dengan sidebar sesi percakapan global (`workspace_id IS NULL`).
+  - ⚡ **API & DB:** Simpan pesan chat ke Supabase tabel `chats` dan `messages`.
+  - 🔄 **State:** Switch antar sesi percakapan, new chat session, streaming response via `useChat`.
+  - 🧪 **Testing:** Chat di Global Assistant dan Workspace Chat, verifikasi riwayat tersimpan permanen di Supabase DB.
+
+---
+
+### 📌 TASK 6: Halaman Notes / Catatan Personal (`/notes`)
+- [ ] **[AGENT] Sistem Catatan & Rich Text Editor**
+  - 🎨 **Design:** UI `/notes` (Sidebar daftar catatan + Rich Text/Markdown Editor).
+  - ⚡ **API & DB:** CRUD `notes` + Insert log ke `activity_logs` (`action: "CREATE_NOTE"`).
+  - 🔄 **State:** Auto-save draft (debounce 1000ms), search & filter notes.
+  - 🧪 **Testing:** Buat & edit catatan, pastikan link di `/history` mengarahkan ke note tersebut.
+
+---
+
+### 📌 TASK 7: Admin Dashboard & System Management (`/admin`)
+- [ ] **[AGENT] Panel Admin, User Management & Broadcast**
+  - 🎨 **Design:** Dashboard Metrics, Data Table Users, Broadcast Notification Form.
+  - ⚡ **API & DB:** Service Role Bypass RLS (`lib/supabase/admin.ts`), Guard Middleware Admin, Notification Blast.
+  - 🔄 **State:** Realtime Notification Bell counter di akun User.
+  - 🧪 **Testing:** Admin blast notifikasi -> Bell ikon di akun User menyala.
+
+---
+
+## 🔵 Fase Akhir: Testing, Polish & Deployment
+
+- [ ] **[AGENT] Polish, Performance & Type Safety Check**
+  - Run `npm run build` dan `npx tsc --noEmit` untuk 0 TypeScript error.
+- [ ] **[USER / AGENT] Production Deployment (Vercel)**
+  - Push ke GitHub, setup Env Vars di Vercel, verifikasi OAuth & API Gemini.

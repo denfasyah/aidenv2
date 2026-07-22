@@ -271,3 +271,10 @@ body {
   margin-top: 1.5rem !important;
   padding: 0 !important;
 }
+
+/* ── Animasi Loading Bar Sweep (Summary / AI Loading) ── */
+@keyframes progress-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
