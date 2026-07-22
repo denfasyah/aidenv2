@@ -504,18 +504,6 @@ export function FlashcardPanel({ workspaceId, workspaceTitle, fileUrl }: Flashca
               <option value={5}>5 Cards</option>
               <option value={10}>10 Cards (Best)</option>
             </select>
-            {/* Shuffle button */}
-            <button
-              onClick={handleShuffle}
-              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border text-[11px] sm:text-xs font-bold tracking-wide transition-all active:scale-[0.97] ${
-                isShuffled
-                  ? "border-primary bg-primary/20 text-primary"
-                  : "border-border bg-background hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Shuffle className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{isShuffled ? "SHUFFLED" : "SHUFFLE"}</span>
-            </button>
             {/* Regenerate button */}
             <button
               onClick={() => handleGenerate(true)}

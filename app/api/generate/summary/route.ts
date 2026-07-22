@@ -85,10 +85,11 @@ Poin-poin istilah/konsep teknis yang wajib dikuasai.
 ### ✅ Takeaway
 Rangkuman penutup gaya Aiden yang kasual — singkat, padat, bikin semangat.
 
-ATURAN:
+ATURAN KETAT:
 1. Hanya rangkum dari dokumen yang dilampirkan, ga boleh ngarang.
-2. Gunakan Markdown murni: **bold**, bullet list (- ), numbered list, blockquote (>), heading (###). JANGAN pakai tag HTML.
-3. Bahasa Indonesia gaul tapi tetap informatif dan mudah dipahami.`
+2. WAJIB cantumkan rujukan nomor halaman dokumen (misal: "(Hal. 2)" atau "[Halaman 3-5]") di setiap poin pembahasan/konsep utama agar sumbernya super transparan.
+3. Gunakan Markdown murni: **bold**, bullet list (- ), numbered list, blockquote (>), heading (###). JANGAN pakai tag HTML.
+4. Bahasa Indonesia gaul tapi tetap informatif dan mudah dipahami.`
 
     const promptMessages: any[] = []
     if (pdfContent) {
