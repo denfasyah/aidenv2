@@ -108,9 +108,18 @@ export function NotesClient({ initialWorkspaces }: NotesClientProps) {
 
   // Open Edit Modal
   const handleOpenEdit = (note: NoteItem) => {
+    let localCat: string | null = null
+    try {
+      const stored = localStorage.getItem("aiden_notes_categories") || "{}"
+      const map = JSON.parse(stored)
+      localCat = map[note.id] || null
+    } catch { /* ignore */ }
+
+    const activeCat = note.category || localCat || (note.title.toLowerCase().includes("summary") || note.title.toLowerCase().includes("ringkasan") ? "Summary" : "Personal Note")
+
     setEditingNote(note)
     setFormTitle(note.title)
-    setFormCategory(note.category || (note.title.toLowerCase().includes("summary") ? "Summary" : "Personal Note"))
+    setFormCategory(activeCat)
     setFormContent(note.content)
     setIsModalOpen(true)
   }
@@ -118,7 +127,15 @@ export function NotesClient({ initialWorkspaces }: NotesClientProps) {
   // Open View Modal via SweetAlert2 (Theme Mode Compatible)
   const handleViewNote = (note: NoteItem) => {
     const formattedDate = format(new Date(note.updated_at || note.created_at), "dd MMMM yyyy HH:mm", { locale: localeId })
-    const badgeCategory = note.category || (note.title.toLowerCase().includes("summary") ? "Summary" : note.workspaces?.title || "Personal Note")
+    
+    let localCat: string | null = null
+    try {
+      const stored = localStorage.getItem("aiden_notes_categories") || "{}"
+      const map = JSON.parse(stored)
+      localCat = map[note.id] || null
+    } catch { /* ignore */ }
+
+    const badgeCategory = note.category || localCat || (note.title.toLowerCase().includes("summary") || note.title.toLowerCase().includes("ringkasan") ? "Summary" : note.workspaces?.title || "Personal Note")
     const swalTheme = getSwalThemeOptions()
     const isLight = document.documentElement.classList.contains("light")
 
@@ -144,7 +161,8 @@ export function NotesClient({ initialWorkspaces }: NotesClientProps) {
       showCloseButton: true,
       showConfirmButton: false,
       customClass: {
-        popup: "rounded-2xl border border-border shadow-2xl backdrop-blur-md p-6",
+        container: "backdrop-blur-sm bg-black/60",
+        popup: "rounded-2xl border border-border shadow-2xl p-6",
         closeButton: "focus:outline-none text-muted-foreground hover:text-foreground",
       },
     })
@@ -164,7 +182,7 @@ export function NotesClient({ initialWorkspaces }: NotesClientProps) {
     }
 
     try {
-      setSaving(true)
+      let noteIdSaved: string | null = null
       if (editingNote) {
         // Update
         const res = await fetch(`/api/notes/${editingNote.id}`, {
@@ -176,7 +194,11 @@ export function NotesClient({ initialWorkspaces }: NotesClientProps) {
             category: formCategory,
           }),
         })
-        if (!res.ok) throw new Error("Gagal update catatan")
+        if (!res.ok) {
+          const errTxt = await res.text()
+          throw new Error(errTxt || "Gagal update catatan")
+        }
+        noteIdSaved = editingNote.id
       } else {
         // Create
         const res = await fetch("/api/notes", {
@@ -188,7 +210,22 @@ export function NotesClient({ initialWorkspaces }: NotesClientProps) {
             category: formCategory,
           }),
         })
-        if (!res.ok) throw new Error("Gagal membuat catatan")
+        if (!res.ok) {
+          const errTxt = await res.text()
+          throw new Error(errTxt || "Gagal membuat catatan")
+        }
+        const data = await res.json()
+        noteIdSaved = data.note?.id
+      }
+
+      // Persist local category choice in localStorage if category column doesn't exist in Supabase DB
+      if (noteIdSaved && formCategory) {
+        try {
+          const stored = localStorage.getItem("aiden_notes_categories") || "{}"
+          const map = JSON.parse(stored)
+          map[noteIdSaved] = formCategory
+          localStorage.setItem("aiden_notes_categories", JSON.stringify(map))
+        } catch { /* ignore */ }
       }
 
       setIsModalOpen(false)
@@ -227,6 +264,7 @@ export function NotesClient({ initialWorkspaces }: NotesClientProps) {
       confirmButtonText: "Ya, Hapus!",
       cancelButtonText: "Batal",
       customClass: {
+        container: "backdrop-blur-sm bg-black/60",
         popup: "rounded-2xl border border-border shadow-2xl",
       },
     })
@@ -385,7 +423,16 @@ export function NotesClient({ initialWorkspaces }: NotesClientProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {paginatedNotes.map((note) => {
               const formattedDate = format(new Date(note.updated_at || note.created_at), "dd MMM yyyy", { locale: localeId })
-              const categoryBadge = note.category || (note.title.toLowerCase().includes("summary") ? "Summary" : "Personal Note")
+              
+              // Get local category fallback if present in localStorage
+              let localCat: string | null = null
+              try {
+                const stored = localStorage.getItem("aiden_notes_categories") || "{}"
+                const map = JSON.parse(stored)
+                localCat = map[note.id] || null
+              } catch { /* ignore */ }
+
+              const categoryBadge = note.category || localCat || (note.title.toLowerCase().includes("summary") || note.title.toLowerCase().includes("ringkasan") ? "Summary" : "Personal Note")
               const isSummaryNote = categoryBadge.toLowerCase().includes("summary")
 
               return (

@@ -55,19 +55,47 @@ export async function POST(req: Request) {
       targetWorkspaceId = firstWs?.id || null
     }
 
+    const insertPayload: any = {
+      user_id: user.id,
+      workspace_id: targetWorkspaceId,
+      title,
+      content,
+    }
+    if (category) {
+      insertPayload.category = category
+    }
+
     const { data: newNote, error: insertError } = await supabase
       .from("notes")
-      .insert({
-        user_id: user.id,
-        workspace_id: targetWorkspaceId,
-        title,
-        content,
-        category: category || "Personal Note",
-      })
+      .insert(insertPayload)
       .select()
       .single()
 
     if (insertError) {
+      // Fallback if category column doesn't exist in Supabase table schema
+      if (insertError.message?.includes("category")) {
+        delete insertPayload.category
+        const { data: retryNote, error: retryError } = await supabase
+          .from("notes")
+          .insert(insertPayload)
+          .select()
+          .single()
+
+        if (retryError) {
+          console.error("Create Note Retry Error:", retryError)
+          return new Response(retryError.message || "Failed to create note", { status: 500 })
+        }
+
+        await supabase.from("activity_logs").insert({
+          user_id: user.id,
+          workspace_id: targetWorkspaceId || null,
+          action_type: "CREATE_NOTE",
+          details: { title, target_url: "/notes" },
+        })
+
+        return Response.json({ note: retryNote })
+      }
+
       console.error("Create Note Error:", insertError)
       return new Response(insertError.message || "Failed to create note", { status: 500 })
     }

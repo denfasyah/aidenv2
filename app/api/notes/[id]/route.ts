@@ -13,27 +13,53 @@ export async function PUT(
       return new Response("Unauthorized", { status: 401 })
     }
 
-    const { title, content } = await req.json()
+    const { title, content, category } = await req.json()
 
     if (!title || !content) {
       return new Response("Title and content are required", { status: 400 })
     }
 
+    const updateData: any = {
+      title,
+      content,
+      updated_at: new Date().toISOString(),
+    }
+    if (category) {
+      updateData.category = category
+    }
+
     const { data: updatedNote, error: updateError } = await supabase
       .from("notes")
-      .update({
-        title,
-        content,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", id)
       .eq("user_id", user.id)
       .select()
       .single()
 
     if (updateError) {
+      // If error is caused by category column missing in DB schema, fallback without category
+      if (updateError.message?.includes("category")) {
+        const { data: retryNote, error: retryError } = await supabase
+          .from("notes")
+          .update({
+            title,
+            content,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .select()
+          .single()
+
+        if (retryError) {
+          console.error("Update Note Retry Error:", retryError)
+          return new Response(retryError.message || "Failed to update note", { status: 500 })
+        }
+        return Response.json({ note: retryNote })
+      }
+
       console.error("Update Note Error:", updateError)
-      return new Response("Failed to update note", { status: 500 })
+      return new Response(updateError.message || "Failed to update note", { status: 500 })
     }
 
     return Response.json({ note: updatedNote })
