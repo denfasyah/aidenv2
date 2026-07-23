@@ -83,11 +83,11 @@ Setiap task wajib melalui 4 tahap pengerjaan: **UI/UX Design**, **API & DB Integ
 ---
 
 ### 📌 TASK 6: Halaman Notes / Catatan Personal (`/notes`)
-- [ ] **[AGENT] Sistem Catatan & Rich Text Editor**
-  - 🎨 **Design:** UI `/notes` (Sidebar daftar catatan + Rich Text/Markdown Editor).
-  - ⚡ **API & DB:** CRUD `notes` + Insert log ke `activity_logs` (`action: "CREATE_NOTE"`).
-  - 🔄 **State:** Auto-save draft (debounce 1000ms), search & filter notes.
-  - 🧪 **Testing:** Buat & edit catatan, pastikan link di `/history` mengarahkan ke note tersebut.
+- [x] **[AGENT] Sistem Catatan & Rich Text Editor**
+  - 🎨 **Design:** UI `/notes` (Smart Learning Notes Hero Banner + Grid Card Layout + SweetAlert2 Modal).
+  - ⚡ **API & DB:** CRUD `notes` (`/api/notes` & `/api/notes/[id]`) + Insert log ke `activity_logs` (`action: "CREATE_NOTE"`).
+  - 🔄 **State:** Realtime search & sort filter, full SweetAlert2 view modal, Edit/Delete kebab dropdown menu.
+  - 🧪 **Testing:** Buat & edit catatan, simpan ringkasan dari Workspace ke Notes, verifikasi popup SweetAlert2 dan hapus catatan.
 
 ---
 

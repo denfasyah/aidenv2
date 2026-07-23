@@ -15,21 +15,43 @@ export async function POST(req: Request) {
       return new Response("Workspace ID and content are required", { status: 400 })
     }
 
-    // Insert new note linked to the workspace
-    const { data: newNote, error: insertError } = await supabase
+    // Try inserting with category field
+    const insertPayload: any = {
+      workspace_id: workspaceId,
+      user_id: user.id,
+      title: title || "Ringkasan Materi",
+      content: content,
+      category: "Summary",
+    }
+
+    let newNote: any = null
+    const { data: insertedData, error: insertError } = await supabase
       .from("notes")
-      .insert({
-        workspace_id: workspaceId,
-        user_id: user.id,
-        title: title || "Ringkasan Materi",
-        content: content,
-      })
+      .insert(insertPayload)
       .select()
       .single()
 
     if (insertError) {
       console.error("Save Note Error:", insertError)
-      return new Response("Failed to save note to database", { status: 500 })
+      // Fallback if category column doesn't exist in Supabase DB schema
+      if (insertError.message?.includes("category")) {
+        delete insertPayload.category
+        const { data: retryData, error: retryError } = await supabase
+          .from("notes")
+          .insert(insertPayload)
+          .select()
+          .single()
+
+        if (retryError) {
+          console.error("Save Note Retry Error:", retryError)
+          return new Response(retryError.message || "Failed to save note to database", { status: 500 })
+        }
+        newNote = retryData
+      } else {
+        return new Response(insertError.message || "Failed to save note to database", { status: 500 })
+      }
+    } else {
+      newNote = insertedData
     }
 
     // Insert activity log for saving note
