@@ -49,7 +49,7 @@ Setiap task wajib melalui 4 tahap pengerjaan: **UI/UX Design**, **API & DB Integ
 ---
 
 ### 📌 TASK 3: Workspace Detail — Tab Quiz & Attempt History
-- [ ] **[AGENT] Fitur Interactive Quiz & Attempt Logs**
+- [x] **[AGENT] Fitur Interactive Quiz & Attempt Logs**
   - 🎨 **Design:** 
     - UI Tab `QUIZ` di Workspace Detail. 
     - **Quiz Runner:** Tampilan soal pilihan ganda (Radio options, instant feedback penjelasan jawaban benar/salah, submit quiz).
