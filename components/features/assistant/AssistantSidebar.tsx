@@ -57,12 +57,15 @@ export function AssistantSidebar({
       showCancelButton: true,
       confirmButtonText: "Simpan",
       cancelButtonText: "Batal",
-      confirmButtonColor: "var(--primary, #16a34a)",
+      buttonsStyling: false,
       background: isDark ? "#0d1221" : "#ffffff",
       color: isDark ? "#f3f4f6" : "#1f2937",
       customClass: {
-        popup: "rounded-2xl border border-border",
-        input: "bg-background border-border text-foreground rounded-lg"
+        popup: "swal-popup-custom",
+        actions: "swal-actions-row",
+        confirmButton: "swal-btn-primary",
+        cancelButton: "swal-btn-cancel",
+        input: "!bg-transparent border-border text-foreground rounded-lg !shadow-none"
       },
       preConfirm: (value) => {
         if (!value || !value.trim()) {

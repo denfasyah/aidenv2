@@ -45,8 +45,27 @@ function stripAttachmentTags(content: string) {
 }
 
 // ─── Attachment chips rendered inside/below a message bubble ───────────────────
-function AttachmentChips({ content }: { content: string }) {
-  const items = extractAttachments(content)
+// Accepts both [File: ...] tags in content and experimental_attachments from useChat
+function AttachmentChips({
+  content,
+  expAttachments,
+}: {
+  content: string
+  expAttachments?: Array<{ name?: string; url: string; contentType?: string }>
+}) {
+  // Try [File: ...] tags first (DB-loaded messages)
+  const tagItems = extractAttachments(content)
+
+  // Fallback to experimental_attachments (live useChat messages before reload)
+  const items: FileAttachment[] =
+    tagItems.length > 0
+      ? tagItems
+      : (expAttachments?.map((a) => ({
+          name: a.name || "File",
+          type: a.contentType || "application/octet-stream",
+          url: a.url,
+        })) ?? [])
+
   if (items.length === 0) return null
 
   return (
@@ -563,6 +582,11 @@ export function AssistantChatArea({
               {messages.map((m: Message, idx) => {
                 const isUser = m.role === "user"
                 const cleanContent = stripAttachmentTags(m.content)
+                // Use experimental_attachments from useChat for live messages
+                // (fallback when [File:...] tags aren't yet in content)
+                const expAttachments = (m as any).experimental_attachments as
+                  | Array<{ name?: string; url: string; contentType?: string }>
+                  | undefined
 
                 return (
                   <div
@@ -575,6 +599,10 @@ export function AssistantChatArea({
                       </div>
                     )}
                     <div className={`max-w-[80%] ${isUser ? "items-end" : "items-start"} flex flex-col gap-0`}>
+                      {/* Attachments rendered ABOVE the text bubble for user messages (like ChatGPT) */}
+                      {isUser && (
+                        <AttachmentChips content={m.content} expAttachments={expAttachments} />
+                      )}
                       <div
                         className={`px-4 py-3 rounded-2xl ${
                           isUser
@@ -587,8 +615,10 @@ export function AssistantChatArea({
                             {isUser ? cleanContent : <MessageContent content={cleanContent} />}
                           </div>
                         )}
-                        {/* Attachments rendering inside bubble */}
-                        <AttachmentChips content={m.content} />
+                        {/* For assistant messages, attachments appear inside the bubble */}
+                        {!isUser && (
+                          <AttachmentChips content={m.content} expAttachments={expAttachments} />
+                        )}
                       </div>
                     </div>
                   </div>

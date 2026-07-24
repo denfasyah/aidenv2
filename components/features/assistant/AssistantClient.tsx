@@ -66,6 +66,9 @@ export function AssistantClient() {
   }
 
   const handleRenameChat = async (id: string, newTitle: string) => {
+    // Capture old title for rollback in case API fails
+    const oldTitle = chats.find((c) => c.id === id)?.title ?? ""
+    // Optimistic update — show new title immediately
     setChats((prev) => prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c)))
     try {
       const res = await fetch(`/api/assistant/conversations/${id}`, {
@@ -74,11 +77,13 @@ export function AssistantClient() {
         body: JSON.stringify({ title: newTitle }),
       })
       if (!res.ok) {
-        fetchConversations()
+        // Revert in-place — NO skeleton, NO full reload
+        setChats((prev) => prev.map((c) => (c.id === id ? { ...c, title: oldTitle } : c)))
       }
     } catch (e) {
       console.error("Failed to rename conversation:", e)
-      fetchConversations()
+      // Revert in-place on network error
+      setChats((prev) => prev.map((c) => (c.id === id ? { ...c, title: oldTitle } : c)))
     }
   }
 
@@ -91,12 +96,14 @@ export function AssistantClient() {
       showCancelButton: true,
       confirmButtonText: "Hapus",
       cancelButtonText: "Batal",
-      confirmButtonColor: "#ef4444",
-      cancelButtonColor: "#6b7280",
+      buttonsStyling: false,
       background: isDark ? "#0d1221" : "#ffffff",
       color: isDark ? "#f3f4f6" : "#1f2937",
       customClass: {
-        popup: "rounded-2xl border border-border shadow-2xl",
+        popup: "swal-popup-custom",
+        actions: "swal-actions-row",
+        confirmButton: "swal-btn-destructive",
+        cancelButton: "swal-btn-cancel",
       }
     })
 
