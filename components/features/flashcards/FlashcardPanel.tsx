@@ -36,7 +36,7 @@ const REACTIONS: {
   },
   {
     key: "medium",
-    label: "LUMAYA",
+    label: "LUMAYAN",
     emoji: "😊",
     activeClass: "bg-amber-900/80 border-amber-500 text-amber-300",
     hoverClass: "hover:bg-amber-900/60 hover:border-amber-500",
