@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react"
 import { AssistantSidebar } from "@/components/features/assistant/AssistantSidebar"
 import { AssistantChatArea } from "@/components/features/assistant/AssistantChatArea"
-import { Menu, X, ArrowLeft } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import Swal from "sweetalert2"
-import Link from "next/link"
 
 interface Chat {
   id: string
@@ -19,7 +18,6 @@ export default function AssistantPage() {
   const [loadingChats, setLoadingChats] = useState(true)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
-  // Fetch recent conversations on load
   const fetchConversations = async () => {
     try {
       setLoadingChats(true)
@@ -27,7 +25,6 @@ export default function AssistantPage() {
       if (res.ok) {
         const data = await res.json()
         setChats(data)
-        // Auto select the first chat if there are any and no chat is selected
         if (data.length > 0 && !activeChatId) {
           setActiveChatId(data[0].id)
         }
@@ -44,13 +41,11 @@ export default function AssistantPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Start new conversation by resetting activeChatId
   const handleNewChat = () => {
     setActiveChatId(null)
     setMobileSidebarOpen(false)
   }
 
-  // Create new conversation on demand (first message sent)
   const handleNewConversationNeeded = async (firstMessage: string) => {
     try {
       const res = await fetch("/api/assistant/conversations", {
@@ -58,7 +53,6 @@ export default function AssistantPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: firstMessage }),
       })
-
       if (res.ok) {
         const newChat = await res.json()
         setChats((prev) => [newChat, ...prev])
@@ -66,30 +60,30 @@ export default function AssistantPage() {
         return newChat.id
       }
     } catch (e) {
-      console.error("Error creating conversation on message:", e)
+      console.error("Error creating conversation:", e)
     }
     return ""
   }
 
-  // Rename a conversation
   const handleRenameChat = async (id: string, newTitle: string) => {
+    // Optimistic update first
+    setChats((prev) => prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c)))
     try {
       const res = await fetch(`/api/assistant/conversations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: newTitle }),
       })
-
-      if (res.ok) {
-        const updated = await res.json()
-        setChats((prev) => prev.map((c) => (c.id === id ? updated : c)))
+      if (!res.ok) {
+        // Rollback on failure — refetch
+        fetchConversations()
       }
     } catch (e) {
       console.error("Failed to rename conversation:", e)
+      fetchConversations()
     }
   }
 
-  // Delete a conversation
   const handleDeleteChat = async (id: string) => {
     const result = await Swal.fire({
       title: "Hapus Percakapan?",
@@ -100,37 +94,31 @@ export default function AssistantPage() {
       cancelButtonColor: "#6b7280",
       confirmButtonText: "Hapus",
       cancelButtonText: "Batal",
+      background: "hsl(var(--card))",
+      color: "hsl(var(--foreground))",
+      customClass: {
+        popup: "!rounded-2xl !border !border-border",
+      }
     })
 
     if (!result.isConfirmed) return
 
-    try {
-      const res = await fetch(`/api/assistant/conversations/${id}`, {
-        method: "DELETE",
-      })
+    setChats((prev) => prev.filter((c) => c.id !== id))
+    if (activeChatId === id) setActiveChatId(null)
 
-      if (res.ok) {
-        setChats((prev) => prev.filter((c) => c.id !== id))
-        if (activeChatId === id) {
-          setActiveChatId(null)
-        }
-        Swal.fire({
-          title: "Terhapus!",
-          text: "Percakapan berhasil dihapus.",
-          icon: "success",
-          timer: 1500,
-          showConfirmButton: false,
-        })
-      }
+    try {
+      await fetch(`/api/assistant/conversations/${id}`, { method: "DELETE" })
     } catch (e) {
-      console.error("Failed to delete conversation:", e)
+      console.error("Failed to delete:", e)
     }
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden relative rounded-2xl border border-border bg-card shadow-sm">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block">
+    // 100vh minus top-navbar(4rem) minus vertical padding(p-4 = 2rem total)
+    <div className="relative flex h-[calc(100vh-6rem)] w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+
+      {/* Desktop Sidebar — fixed width, full height */}
+      <div className="hidden md:flex flex-col w-72 xl:w-80 shrink-0 border-r border-border overflow-hidden">
         <AssistantSidebar
           chats={chats}
           activeChatId={activeChatId}
@@ -142,29 +130,27 @@ export default function AssistantPage() {
         />
       </div>
 
-      {/* Mobile Hamburger Trigger / Toggle Drawer */}
+      {/* Mobile Hamburger */}
       <button
         onClick={() => setMobileSidebarOpen(true)}
-        className="md:hidden absolute left-4 top-4.5 z-20 p-2 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground"
+        className="md:hidden absolute left-4 top-4 z-20 p-2 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground transition-colors"
       >
         <Menu className="h-4 w-4" />
       </button>
 
-      {/* Mobile Sliding Sidebar Drawer */}
+      {/* Mobile Sidebar Portal */}
       {mobileSidebarOpen && (
         <>
-          {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
+            className="fixed inset-0 bg-background/70 backdrop-blur-sm z-[100] md:hidden"
             onClick={() => setMobileSidebarOpen(false)}
           />
-          {/* Drawer container */}
-          <div className="fixed top-0 left-0 bottom-0 w-80 bg-sidebar border-r border-sidebar-border z-50 md:hidden flex flex-col animate-in slide-in-from-left duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-sidebar-border shrink-0">
-              <span className="font-bold text-sm text-foreground">Percakapan Saya</span>
+          <div className="fixed top-0 left-0 bottom-0 w-72 bg-sidebar border-r border-sidebar-border z-[101] md:hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-sidebar-border shrink-0 h-14">
+              <span className="font-bold text-sm text-sidebar-foreground">Percakapan Saya</span>
               <button
                 onClick={() => setMobileSidebarOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+                className="p-1.5 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/70"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -173,10 +159,7 @@ export default function AssistantPage() {
               <AssistantSidebar
                 chats={chats}
                 activeChatId={activeChatId}
-                onSelectChat={(id) => {
-                  setActiveChatId(id)
-                  setMobileSidebarOpen(false)
-                }}
+                onSelectChat={(id) => { setActiveChatId(id); setMobileSidebarOpen(false) }}
                 onNewChat={handleNewChat}
                 onRenameChat={handleRenameChat}
                 onDeleteChat={handleDeleteChat}
@@ -187,11 +170,10 @@ export default function AssistantPage() {
         </>
       )}
 
-      {/* Chat Area */}
-      <div className="flex-1 h-full min-w-0">
+      {/* Chat Area — fills remaining space */}
+      <div className="flex-1 min-w-0 overflow-hidden">
         <AssistantChatArea
           chatId={activeChatId}
-          chats={chats}
           setChats={setChats}
           onNewConversationNeeded={handleNewConversationNeeded}
         />

@@ -1,11 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Search, MoreVertical, Edit, Trash2, MessageSquare, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui"
+import {
+  Plus, Search, MoreVertical, Edit2, Trash2, MessageSquare, Check, X
+} from "lucide-react"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { formatDistanceToNow } from "date-fns"
-import { id as localeId } from "date-fns/locale"
 
 interface Chat {
   id: string
@@ -23,6 +22,16 @@ interface AssistantSidebarProps {
   loadingChats: boolean
 }
 
+// ─── Skeleton item ────────────────────────────────────────────────────────────
+function ChatSkeleton() {
+  return (
+    <div className="p-3.5 rounded-xl border border-transparent animate-pulse space-y-2">
+      <div className="h-3.5 bg-muted rounded w-3/4" />
+      <div className="h-2.5 bg-muted/60 rounded w-1/2" />
+    </div>
+  )
+}
+
 export function AssistantSidebar({
   chats,
   activeChatId,
@@ -33,150 +42,186 @@ export function AssistantSidebar({
   loadingChats,
 }: AssistantSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [editingChatId, setEditingChatId] = useState<string | null>(null)
-  const [editTitle, setEditTitle] = useState("")
+  // Inline edit state — holds the id being edited and current draft value
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState("")
 
-  const filteredChats = chats.filter((c) =>
+  const filtered = chats.filter((c) =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleStartRename = (chat: Chat) => {
-    setEditingChatId(chat.id)
-    setEditTitle(chat.title)
+  const startEdit = (chat: Chat) => {
+    setEditingId(chat.id)
+    setEditDraft(chat.title)
   }
 
-  const handleSaveRename = (id: string) => {
-    if (editTitle.trim()) {
-      onRenameChat(id, editTitle.trim())
+  const commitEdit = (id: string) => {
+    if (editDraft.trim() && editDraft.trim() !== chats.find((c) => c.id === id)?.title) {
+      onRenameChat(id, editDraft.trim())
     }
-    setEditingChatId(null)
+    setEditingId(null)
   }
 
-  const getRelativeTime = (dateStr: string) => {
+  const cancelEdit = () => setEditingId(null)
+
+  const relativeTime = (dateStr: string): string => {
     try {
-      const date = new Date(dateStr)
-      return formatDistanceToNow(date, { addSuffix: true, locale: localeId })
+      const diff = Date.now() - new Date(dateStr).getTime()
+      const minutes = Math.floor(diff / 60000)
+      if (minutes < 1) return "baru saja"
+      if (minutes < 60) return `${minutes} menit lalu`
+      const hours = Math.floor(minutes / 60)
+      if (hours < 24) return `${hours} jam lalu`
+      const days = Math.floor(hours / 24)
+      if (days < 7) return `${days} hari lalu`
+      const weeks = Math.floor(days / 7)
+      return `${weeks} minggu lalu`
     } catch {
       return "baru saja"
     }
   }
 
   return (
-    <div className="flex flex-col h-full bg-sidebar border-r border-sidebar-border w-full md:w-80 shrink-0">
-      {/* New Conversation Button */}
-      <div className="p-4 border-b border-sidebar-border">
-        <Button
+    <div className="flex flex-col h-full bg-sidebar w-full">
+      {/* New Conversation */}
+      <div className="p-4 shrink-0 border-b border-sidebar-border">
+        <button
           onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-xl py-5"
+          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl py-2.5 text-sm transition-all"
         >
-          <Plus className="h-5 w-5" />
-          <span>New Conversation</span>
-        </Button>
+          <Plus className="h-4 w-4" />
+          New Conversation
+        </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="p-4 border-b border-sidebar-border">
-        <div className="relative flex items-center bg-background rounded-xl border border-input focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-          <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
+      {/* Search */}
+      <div className="px-4 py-3 shrink-0 border-b border-sidebar-border">
+        <div className="relative flex items-center">
+          <Search className="absolute left-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             placeholder="Search chat..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent pl-10 pr-4 py-2.5 text-sm focus:outline-none text-foreground placeholder:text-muted-foreground"
+            className="w-full bg-background/60 border border-border rounded-lg pl-8 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
           />
         </div>
       </div>
 
-      {/* Recent Conversations Title */}
-      <div className="px-4 pt-4 pb-2">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      {/* Section label */}
+      <div className="px-4 pt-3 pb-1 shrink-0">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
           Recent Conversations
-        </h4>
+        </span>
       </div>
 
-      {/* Chat List */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-1.5 custom-scrollbar">
+      {/* Chat list */}
+      <div className="flex-1 overflow-y-auto px-2 pb-4 flex flex-col gap-1 custom-scrollbar">
         {loadingChats ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-2">
-            <Loader2 className="h-6 w-6 text-primary animate-spin" />
-            <span className="text-xs text-muted-foreground">Loading history...</span>
-          </div>
-        ) : filteredChats.length === 0 ? (
-          <div className="text-center py-10 text-xs text-muted-foreground">
-            {searchQuery ? "Tidak ditemukan hasil" : "Belum ada percakapan"}
-          </div>
+          <>
+            {[...Array(4)].map((_, i) => <ChatSkeleton key={i} />)}
+          </>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-xs text-muted-foreground py-8">
+            {searchQuery ? "Tidak ada hasil" : "Belum ada percakapan"}
+          </p>
         ) : (
-          filteredChats.map((chat) => {
+          filtered.map((chat) => {
             const isActive = chat.id === activeChatId
-            const isEditing = chat.id === editingChatId
+            const isEditing = chat.id === editingId
 
             return (
               <div
                 key={chat.id}
-                className={`group relative flex flex-col gap-1 p-3.5 rounded-xl border transition-all cursor-pointer ${
+                className={`group relative rounded-xl border transition-all duration-150 ${
                   isActive
-                    ? "bg-sidebar-accent/80 border-sidebar-border text-sidebar-accent-foreground shadow-sm"
-                    : "bg-transparent border-transparent hover:bg-sidebar-accent/40 text-sidebar-foreground"
+                    ? "bg-sidebar-accent border-sidebar-accent text-sidebar-accent-foreground"
+                    : "border-transparent hover:bg-sidebar-accent/40 text-sidebar-foreground cursor-pointer"
                 }`}
                 onClick={() => !isEditing && onSelectChat(chat.id)}
               >
-                {isEditing ? (
-                  <div className="flex items-center gap-1.5 w-full" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onBlur={() => handleSaveRename(chat.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveRename(chat.id)
-                        if (e.key === "Escape") setEditingChatId(null)
-                      }}
-                      autoFocus
-                      className="flex-1 bg-background border border-input rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-start justify-between gap-2 pr-6">
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="font-semibold text-sm truncate max-w-[180px]">
-                        {chat.title}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3 shrink-0" />
-                        {getRelativeTime(chat.created_at)}
-                      </span>
-                    </div>
-
-                    {/* Actions Menu */}
+                <div className="px-3 py-3 pr-9">
+                  {isEditing ? (
+                    // ── Inline edit input ──────────────────────────────────
                     <div
-                      className="absolute right-2 top-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="flex items-center gap-1.5"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="p-1 rounded-md hover:bg-sidebar-accent text-muted-foreground hover:text-foreground">
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-36 bg-card border-border">
-                          <DropdownMenuItem
-                            onClick={() => handleStartRename(chat)}
-                            className="flex items-center gap-2 text-xs"
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                            <span>Edit Judul</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => onDeleteChat(chat.id)}
-                            className="flex items-center gap-2 text-xs text-destructive focus:bg-destructive/10 focus:text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            <span>Hapus</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <input
+                        autoFocus
+                        value={editDraft}
+                        onChange={(e) => setEditDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitEdit(chat.id)
+                          if (e.key === "Escape") cancelEdit()
+                        }}
+                        className="flex-1 min-w-0 bg-background border border-primary/60 rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <button
+                        onClick={() => commitEdit(chat.id)}
+                        className="p-0.5 rounded text-primary hover:bg-primary/10"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="p-0.5 rounded text-muted-foreground hover:bg-muted"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </div>
+                  ) : (
+                    // ── Normal view ───────────────────────────────────────
+                    <>
+                      <p className="font-medium text-xs leading-snug truncate">{chat.title}</p>
+                      <span className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                        <MessageSquare className="h-2.5 w-2.5 shrink-0" />
+                        {relativeTime(chat.created_at)}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Three-dots menu — always rendered, opacity trick */}
+                {!isEditing && (
+                  <div
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isActive
+                              ? "text-sidebar-accent-foreground/70 hover:bg-white/10"
+                              : "text-muted-foreground hover:bg-sidebar-accent/60"
+                          }`}
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        side="bottom"
+                        sideOffset={4}
+                        className="w-36 bg-popover border-border shadow-xl z-[200]"
+                      >
+                        <DropdownMenuItem
+                          onClick={() => startEdit(chat)}
+                          className="flex items-center gap-2 text-xs cursor-pointer"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Edit Judul
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onDeleteChat(chat.id)}
+                          className="flex items-center gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Hapus
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 )}
               </div>
