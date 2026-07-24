@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react"
 import {
   Send, Bot, Sparkles, Square, ChevronDown,
   Paperclip, X, FileText, Image as ImageIcon,
-  PlusCircle, AlertCircle,
+  PlusCircle, AlertCircle, ExternalLink, Download
 } from "lucide-react"
 import { useChat } from "ai/react"
 import type { Message } from "ai/react"
@@ -14,7 +14,6 @@ import { useRouter } from "next/navigation"
 
 interface AssistantChatAreaProps {
   chatId: string | null
-  setChats: React.Dispatch<React.SetStateAction<any[]>>
   onNewConversationNeeded: (firstMessage: string) => Promise<string>
 }
 
@@ -22,14 +21,21 @@ interface AssistantChatAreaProps {
 const WORKSPACE_OFFER_AFTER_MESSAGES = 4
 
 // ─── Attachment metadata embedded in message content ─────────────────────────
-const ATTACH_PATTERN = /\[(PDF|Gambar) Dilampirkan: ([^\]]+)\]/g
+// Format: [File: name | type | url]
+const ATTACH_PATTERN = /\[File:\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^\]]+)\]/g
 
-function extractAttachments(content: string) {
-  const results: Array<{ type: "PDF" | "Gambar"; name: string }> = []
+interface FileAttachment {
+  name: string
+  type: string
+  url: string
+}
+
+function extractAttachments(content: string): FileAttachment[] {
+  const results: FileAttachment[] = []
   let m
   const re = new RegExp(ATTACH_PATTERN.source, "g")
   while ((m = re.exec(content)) !== null) {
-    results.push({ type: m[1] as "PDF" | "Gambar", name: m[2] })
+    results.push({ name: m[1].trim(), type: m[2].trim(), url: m[3].trim() })
   }
   return results
 }
@@ -38,24 +44,77 @@ function stripAttachmentTags(content: string) {
   return content.replace(new RegExp(ATTACH_PATTERN.source, "g"), "").trim()
 }
 
-// ─── Attachment chips rendered inside a message bubble ───────────────────────
+// ─── Attachment chips rendered inside/below a message bubble ───────────────────
 function AttachmentChips({ content }: { content: string }) {
   const items = extractAttachments(content)
   if (items.length === 0) return null
+
   return (
-    <div className="flex flex-wrap gap-1.5 mb-2">
-      {items.map((item, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-1.5 bg-white/10 dark:bg-white/10 backdrop-blur rounded-lg px-2.5 py-1.5 text-[11px] font-medium border border-white/20 max-w-[220px]"
-        >
-          {item.type === "PDF"
-            ? <FileText className="h-3.5 w-3.5 shrink-0 opacity-80" />
-            : <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-80" />}
-          <span className="truncate">{item.name}</span>
-          <span className="shrink-0 text-[9px] opacity-60 uppercase tracking-wider ml-0.5">{item.type}</span>
-        </div>
-      ))}
+    <div className="flex flex-col gap-2 mt-2 w-full">
+      {items.map((item, i) => {
+        const isImage = item.type.startsWith("image/")
+        return (
+          <div
+            key={i}
+            className="flex flex-col bg-muted/60 dark:bg-muted/30 border border-border rounded-xl overflow-hidden max-w-sm shadow-sm"
+          >
+            {isImage ? (
+              <div className="relative group max-h-48 overflow-hidden bg-black/5 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.url}
+                  alt={item.name}
+                  className="object-cover max-h-48 w-full hover:scale-105 transition-transform duration-200"
+                />
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 text-white font-medium text-xs transition-opacity duration-200"
+                >
+                  <ExternalLink className="h-4 w-4" /> Buka Gambar
+                </a>
+              </div>
+            ) : null}
+
+            <div className="p-3 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                {item.type === "application/pdf" ? (
+                  <FileText className="h-4 w-4 text-rose-500 shrink-0" />
+                ) : (
+                  <ImageIcon className="h-4 w-4 text-emerald-500 shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground truncate leading-snug">{item.name}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                    {item.type.split("/")[1] || "file"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1.5 rounded-lg hover:bg-background border border-border text-muted-foreground hover:text-foreground transition-colors"
+                  title="Buka File"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                <a
+                  href={item.url}
+                  download={item.name}
+                  className="p-1.5 rounded-lg hover:bg-background border border-border text-muted-foreground hover:text-foreground transition-colors"
+                  title="Unduh File"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -65,7 +124,7 @@ function parseInline(text: string): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>
+      return <strong key={i} className="font-semibold text-primary">{part.slice(2, -2)}</strong>
     }
     return part.replace(/\*/g, "")
   })
@@ -81,7 +140,7 @@ function MessageContent({ content }: { content: string }) {
     const num = trimmed.match(/^(\d+)[.)]\s+(.+)/)
     if (num) {
       els.push(
-        <div key={i} className="flex gap-2 leading-relaxed">
+        <div key={i} className="flex gap-2 leading-relaxed mt-1">
           <span className="shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">{num[1]}</span>
           <span className="flex-1">{parseInline(num[2])}</span>
         </div>
@@ -91,8 +150,8 @@ function MessageContent({ content }: { content: string }) {
     const bullet = trimmed.match(/^[-•]\s+(.+)/)
     if (bullet) {
       els.push(
-        <div key={i} className="flex gap-2 leading-relaxed">
-          <span className="shrink-0 text-primary mt-1 text-xs">•</span>
+        <div key={i} className="flex gap-2 leading-relaxed mt-1">
+          <span className="shrink-0 text-primary mt-1.5 text-xs">•</span>
           <span className="flex-1">{parseInline(bullet[1])}</span>
         </div>
       )
@@ -104,7 +163,6 @@ function MessageContent({ content }: { content: string }) {
   return <div className="flex flex-col gap-1.5 text-sm">{els}</div>
 }
 
-// ─── Skeleton loader while history is being fetched ──────────────────────────
 function ChatHistorySkeleton() {
   return (
     <div className="flex flex-col gap-4 p-5 animate-pulse">
@@ -121,10 +179,8 @@ function ChatHistorySkeleton() {
   )
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
 export function AssistantChatArea({
   chatId,
-  setChats,
   onNewConversationNeeded,
 }: AssistantChatAreaProps) {
   const router = useRouter()
@@ -139,17 +195,15 @@ export function AssistantChatArea({
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Attachment staging
-  const [stagedFiles, setStagedFiles] = useState<File[]>([])
-  const [stagedPreviews, setStagedPreviews] = useState<Array<{ name: string; type: string; dataUrl: string; base64: string }>>([])
+  // Attachment uploading state
+  const [stagingList, setStagingList] = useState<Array<{ name: string; type: string; url: string; base64: string }>>([])
+  const [isUploading, setIsUploading] = useState(false)
 
-  // Last PDF seen in THIS session (for workspace offer)
+  // PDF tracking for workspace
   const [sessionPdf, setSessionPdf] = useState<{ name: string; base64: string } | null>(null)
-  // Whether user has discussed PDF enough to show workspace offer
   const [showWorkspaceOffer, setShowWorkspaceOffer] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
 
-  // ── AI Chat SDK ─────────────────────────────────────────────────────────────
   const { messages, input, handleInputChange, handleSubmit: sdkSubmit, isLoading, stop, setMessages } = useChat({
     api: "/api/assistant/chat",
     initialMessages: [],
@@ -168,7 +222,7 @@ export function AssistantChatArea({
     },
   })
 
-  // ── Load history when chatId changes ────────────────────────────────────────
+  // Load history when chatId changes
   useEffect(() => {
     if (!chatId) {
       setMessages([])
@@ -191,10 +245,11 @@ export function AssistantChatArea({
             createdAt: new Date(m.created_at),
           }))
         )
-        // Restore workspace offer if PDF was discussed in this conversation
-        const totalMessages = rows.length
-        const hasPdf = rows.some((m: any) => m.content.includes("[PDF Dilampirkan:"))
-        if (hasPdf && totalMessages >= WORKSPACE_OFFER_AFTER_MESSAGES) {
+
+        // Workspace trigger check
+        const hasPdf = rows.some((m: any) => m.content.includes("[File: ") && m.content.includes("application/pdf"))
+        if (hasPdf && rows.length >= WORKSPACE_OFFER_AFTER_MESSAGES) {
+          // Find the last PDF base64 or path to rebuild sessionPdf if needed
           setShowWorkspaceOffer(true)
         }
       })
@@ -202,15 +257,14 @@ export function AssistantChatArea({
       .finally(() => setHistoryLoading(false))
   }, [chatId, setMessages])
 
-  // ── Check workspace offer trigger as messages grow ───────────────────────────
+  // Monitor message length for workspace trigger
   useEffect(() => {
-    const hasPdf = messages.some((m) => m.content.includes("[PDF Dilampirkan:"))
+    const hasPdf = messages.some((m) => m.content.includes("[File: ") && m.content.includes("application/pdf"))
     if (hasPdf && messages.length >= WORKSPACE_OFFER_AFTER_MESSAGES) {
       setShowWorkspaceOffer(true)
     }
   }, [messages])
 
-  // ── Persist message helper ───────────────────────────────────────────────────
   const persistMessage = async (cId: string, role: string, content: string) => {
     try {
       await fetch("/api/assistant/messages", {
@@ -223,7 +277,6 @@ export function AssistantChatArea({
     }
   }
 
-  // ── Smart scroll — only auto-scroll when user is at/near bottom ──────────────
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
@@ -241,94 +294,124 @@ export function AssistantChatArea({
     }
   }, [])
 
-  // Auto-scroll only if user hasn't manually scrolled up
   useEffect(() => {
     scrollToBottom()
   }, [messages, isLoading, scrollToBottom])
 
-  // ── File staging ─────────────────────────────────────────────────────────────
   const openFilePicker = () => fileInputRef.current?.click()
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
-    files.forEach((file) => {
-      if (file.size > 10 * 1024 * 1024) {
+
+    setIsUploading(true)
+    const isDark = document.documentElement.classList.contains("dark")
+
+    for (const file of files) {
+      if (file.size > 15 * 1024 * 1024) {
         Swal.fire({
           title: "File Terlalu Besar",
-          text: `Maksimal 10MB. File "${file.name}" ditolak.`,
+          text: `Maksimal 15MB. File "${file.name}" ditolak.`,
           icon: "warning",
-          background: "hsl(var(--card))",
-          color: "hsl(var(--foreground))",
-          confirmButtonColor: "hsl(var(--primary))",
-          customClass: { popup: "!rounded-2xl" },
+          background: isDark ? "#0d1221" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
+          confirmButtonColor: "var(--primary, #16a34a)",
+          customClass: { popup: "rounded-2xl" },
         })
-        return
+        continue
       }
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string
-        const base64 = dataUrl.split(",")[1] ?? dataUrl
-        setStagedPreviews((p) => [...p, { name: file.name, type: file.type, dataUrl, base64 }])
-        setStagedFiles((p) => [...p, file])
-        if (file.type === "application/pdf") {
-          setSessionPdf({ name: file.name, base64 })
+
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const res = await fetch("/api/assistant/upload", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!res.ok) throw new Error(await res.text())
+
+        const uploadResult = await res.json() // { url, name, type }
+
+        // Read to base64 for Gemini parts & conversion
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string
+          const base64 = dataUrl.split(",")[1] ?? dataUrl
+
+          setStagingList((prev) => [...prev, {
+            name: uploadResult.name,
+            type: uploadResult.type,
+            url: uploadResult.url,
+            base64
+          }])
+
+          if (uploadResult.type === "application/pdf") {
+            setSessionPdf({ name: uploadResult.name, base64 })
+          }
         }
+        reader.readAsDataURL(file)
+
+      } catch (err) {
+        console.error("Upload error:", err)
+        Swal.fire({
+          title: "Gagal Mengunggah",
+          text: `Gagal memuat file "${file.name}": ${err instanceof Error ? err.message : "Error"}`,
+          icon: "error",
+          background: isDark ? "#0d1221" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
+          confirmButtonColor: "var(--primary, #16a34a)",
+          customClass: { popup: "rounded-2xl" },
+        })
       }
-      reader.readAsDataURL(file)
-    })
+    }
+    setIsUploading(false)
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
   const removeStaged = (i: number) => {
-    setStagedFiles((p) => p.filter((_, idx) => idx !== i))
-    setStagedPreviews((p) => p.filter((_, idx) => idx !== i))
+    setStagingList((prev) => prev.filter((_, idx) => idx !== i))
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input.trim() && stagedFiles.length === 0) return
+    if (!input.trim() && stagingList.length === 0) return
 
     userScrolledUpRef.current = false
     setErrorMsg(null)
 
-    // Ensure we have an active chat
     let activeChatId = chatIdRef.current
     if (!activeChatId) {
-      const title = input.trim().slice(0, 40) || "Percakapan Baru"
+      const title = input.trim().slice(0, 40) || (stagingList[0]?.name ? `File: ${stagingList[0].name}` : "Percakapan Baru")
       activeChatId = await onNewConversationNeeded(title)
       chatIdRef.current = activeChatId
     }
     if (!activeChatId) {
-      setErrorMsg("Gagal membuat percakapan baru. Coba refresh halaman.")
+      setErrorMsg("Gagal membuat percakapan baru.")
       return
     }
 
-    // Build DB content string (includes attachment tags)
-    const tags = stagedPreviews.map((p) =>
-      p.type === "application/pdf"
-        ? `[PDF Dilampirkan: ${p.name}]`
-        : `[Gambar Dilampirkan: ${p.name}]`
-    )
+    // Embed persistent file URL attachments in database message
+    const tags = stagingList.map((p) => `[File: ${p.name} | ${p.type} | ${p.url}]`)
     const dbContent = [...tags, input].filter(Boolean).join(" ")
 
     await persistMessage(activeChatId, "user", dbContent)
 
-    // Build FileList for SDK
-    const dt = new DataTransfer()
-    stagedFiles.forEach((f) => dt.items.add(f))
+    // Build attachments compatible with experimental_attachments
+    const attachments = stagingList.map((p) => ({
+      name: p.name,
+      url: p.url,
+      contentType: p.type,
+    }))
 
-    // Clear staging BEFORE submit so textarea doesn't re-fire
-    setStagedFiles([])
-    setStagedPreviews([])
-
-    sdkSubmit(e, { experimental_attachments: dt.files })
+    setStagingList([])
+    sdkSubmit(e, { experimental_attachments: attachments as any })
   }
 
-  // ── Convert to Workspace ─────────────────────────────────────────────────────
   const handleCreateWorkspace = async () => {
     if (!sessionPdf || !chatIdRef.current) return
+    const isDark = document.documentElement.classList.contains("dark")
 
     const { value } = await Swal.fire({
       title: "Buat Workspace dari PDF ini",
@@ -339,15 +422,15 @@ export function AssistantChatArea({
       showCancelButton: true,
       confirmButtonText: "Buat Workspace 🚀",
       cancelButtonText: "Nanti aja",
-      background: "hsl(var(--card))",
-      color: "hsl(var(--foreground))",
-      confirmButtonColor: "hsl(var(--primary))",
+      background: isDark ? "#0d1221" : "#ffffff",
+      color: isDark ? "#f3f4f6" : "#1f2937",
+      confirmButtonColor: "var(--primary, #16a34a)",
       cancelButtonColor: "#6b7280",
-      customClass: { popup: "!rounded-2xl" },
+      customClass: { popup: "rounded-2xl" },
       preConfirm: () => {
         const t = (document.getElementById("sw-title") as HTMLInputElement)?.value
         const d = (document.getElementById("sw-desc") as HTMLInputElement)?.value
-        if (!t?.trim()) { Swal.showValidationMessage("Nama Workspace wajib diisi"); return }
+        if (!t?.trim()) { Swal.showValidationMessage("Nama Workspace wajib diisi") }
         return { title: t, description: d }
       },
     })
@@ -358,9 +441,9 @@ export function AssistantChatArea({
       title: "Memproses...",
       text: "Mengunggah PDF dan memindahkan riwayat chat.",
       allowOutsideClick: false,
-      background: "hsl(var(--card))",
-      color: "hsl(var(--foreground))",
-      customClass: { popup: "!rounded-2xl" },
+      background: isDark ? "#0d1221" : "#ffffff",
+      color: isDark ? "#f3f4f6" : "#1f2937",
+      customClass: { popup: "rounded-2xl" },
       didOpen: () => Swal.showLoading(),
     })
 
@@ -380,10 +463,10 @@ export function AssistantChatArea({
         title: "Gagal",
         text: result.error,
         icon: "error",
-        background: "hsl(var(--card))",
-        color: "hsl(var(--foreground))",
-        confirmButtonColor: "hsl(var(--primary))",
-        customClass: { popup: "!rounded-2xl" },
+        background: isDark ? "#0d1221" : "#ffffff",
+        color: isDark ? "#f3f4f6" : "#1f2937",
+        confirmButtonColor: "var(--primary, #16a34a)",
+        customClass: { popup: "rounded-2xl" },
       })
     } else if (result.workspaceId) {
       Swal.fire({
@@ -392,9 +475,9 @@ export function AssistantChatArea({
         icon: "success",
         timer: 1800,
         showConfirmButton: false,
-        background: "hsl(var(--card))",
-        color: "hsl(var(--foreground))",
-        customClass: { popup: "!rounded-2xl" },
+        background: isDark ? "#0d1221" : "#ffffff",
+        color: isDark ? "#f3f4f6" : "#1f2937",
+        customClass: { popup: "rounded-2xl" },
       })
       router.push(`/workspaces/${result.workspaceId}`)
     }
@@ -428,7 +511,7 @@ export function AssistantChatArea({
           <button
             onClick={handleCreateWorkspace}
             disabled={isConverting}
-            className="shrink-0 flex items-center gap-1.5 text-xs bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 rounded-lg px-3 py-1.5 font-semibold transition-all disabled:opacity-50"
+            className="shrink-0 flex items-center gap-1.5 text-xs bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 rounded-lg px-3 py-1.5 font-semibold transition-all disabled:opacity-50 cursor-pointer"
           >
             <PlusCircle className="h-3.5 w-3.5 shrink-0" />
             <span className="hidden sm:inline">Buat Workspace</span>
@@ -437,19 +520,19 @@ export function AssistantChatArea({
         )}
       </div>
 
-      {/* ── Workspace offer banner (only after threshold) ───────────────────── */}
+      {/* ── Workspace offer banner ───────────────────── */}
       {showWorkspaceOffer && sessionPdf && (
-        <div className="shrink-0 flex items-center justify-between gap-2 bg-primary/8 border-b border-primary/15 px-4 py-2">
+        <div className="shrink-0 flex items-center justify-between gap-2 bg-primary/8 border-b border-primary/15 px-4 py-2 animate-in slide-in-from-top duration-200">
           <div className="flex items-center gap-2 min-w-0 text-xs text-primary">
-            <FileText className="h-3.5 w-3.5 shrink-0" />
+            <FileText className="h-3.5 w-3.5 shrink-0 animate-bounce" />
             <span className="min-w-0">
-              Kamu udah banyak bahas <strong className="font-semibold">{sessionPdf.name}</strong>.
-              Mau dijadiin Workspace belajar?
+              Kamu sudah banyak membahas <strong className="font-semibold">{sessionPdf.name}</strong>.
+              Mau jadikan Workspace belajar khusus materi ini?
             </span>
           </div>
           <button
             onClick={handleCreateWorkspace}
-            className="shrink-0 text-xs font-bold text-primary underline hover:no-underline whitespace-nowrap"
+            className="shrink-0 text-xs font-bold text-primary underline hover:no-underline whitespace-nowrap cursor-pointer"
           >
             Buat Sekarang
           </button>
@@ -466,22 +549,21 @@ export function AssistantChatArea({
           {historyLoading ? (
             <ChatHistorySkeleton />
           ) : messages.length === 0 ? (
-            // ── Empty state ─────────────────────────────────────────────────
             <div className="flex flex-col items-center justify-center h-full py-12 px-6 text-center">
               <div className="w-16 h-16 rounded-2xl bg-primary/8 border border-primary/15 flex items-center justify-center mb-5">
                 <Bot className="h-8 w-8 text-primary/50" />
               </div>
               <h3 className="text-xl font-bold mb-2">Hai, gue Aiden 👋</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Temen belajar virtual lu. Tanya apa aja — materi umum, upload gambar, atau kirim PDF buat dibahas bareng.
+                Temen belajar virtual lu. Tanya apa aja — materi umum, kirim file gambar untuk dianalisis, atau kirim PDF.
               </p>
             </div>
           ) : (
-            // ── Messages ────────────────────────────────────────────────────
             <div className="flex flex-col gap-4 p-5">
               {messages.map((m: Message, idx) => {
                 const isUser = m.role === "user"
                 const cleanContent = stripAttachmentTags(m.content)
+
                 return (
                   <div
                     key={m.id ?? idx}
@@ -493,38 +575,21 @@ export function AssistantChatArea({
                       </div>
                     )}
                     <div className={`max-w-[80%] ${isUser ? "items-end" : "items-start"} flex flex-col gap-0`}>
-                      {/* Attachment chips on top of bubble */}
-                      {isUser && extractAttachments(m.content).length > 0 && (
-                        <div className={`flex flex-wrap gap-1.5 mb-1.5 ${isUser ? "justify-end" : ""}`}>
-                          {extractAttachments(m.content).map((att, ai) => (
-                            <div
-                              key={ai}
-                              className="flex items-center gap-1.5 bg-primary/20 border border-primary/30 text-primary rounded-lg px-2.5 py-1.5 text-[11px] font-medium max-w-[220px]"
-                            >
-                              {att.type === "PDF"
-                                ? <FileText className="h-3.5 w-3.5 shrink-0" />
-                                : <ImageIcon className="h-3.5 w-3.5 shrink-0" />}
-                              <span className="truncate">{att.name}</span>
-                              <span className="shrink-0 text-[9px] opacity-70 uppercase tracking-wider">{att.type}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Message bubble — skip if only attachments and empty text */}
-                      {cleanContent && (
-                        <div
-                          className={`px-4 py-3 rounded-2xl ${
-                            isUser
-                              ? "bg-primary text-primary-foreground rounded-tr-sm text-sm"
-                              : "bg-card border border-border rounded-tl-sm shadow-sm"
-                          }`}
-                        >
-                          {isUser
-                            ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{cleanContent}</p>
-                            : <MessageContent content={cleanContent} />}
-                        </div>
-                      )}
+                      <div
+                        className={`px-4 py-3 rounded-2xl ${
+                          isUser
+                            ? "bg-primary text-primary-foreground rounded-tr-sm text-sm"
+                            : "bg-card border border-border rounded-tl-sm shadow-sm"
+                        }`}
+                      >
+                        {cleanContent && (
+                          <div className={isUser ? "whitespace-pre-wrap text-sm leading-relaxed" : ""}>
+                            {isUser ? cleanContent : <MessageContent content={cleanContent} />}
+                          </div>
+                        )}
+                        {/* Attachments rendering inside bubble */}
+                        <AttachmentChips content={m.content} />
+                      </div>
                     </div>
                   </div>
                 )
@@ -558,8 +623,6 @@ export function AssistantChatArea({
                   {errorMsg}
                 </div>
               )}
-
-              {/* Bottom anchor */}
               <div className="h-1" />
             </div>
           )}
@@ -572,7 +635,7 @@ export function AssistantChatArea({
               userScrolledUpRef.current = false
               scrollToBottom(true)
             }}
-            className="absolute bottom-4 right-4 z-10 w-9 h-9 rounded-full bg-card border border-border shadow-xl flex items-center justify-center hover:bg-muted transition-all"
+            className="absolute bottom-4 right-4 z-10 w-9 h-9 rounded-full bg-card border border-border shadow-xl flex items-center justify-center hover:bg-muted transition-all cursor-pointer"
           >
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </button>
@@ -581,22 +644,24 @@ export function AssistantChatArea({
 
       {/* ── Input area ──────────────────────────────────────────────────────── */}
       <div className="shrink-0 px-4 py-3 border-t border-border bg-background/95">
-        {/* Staged attachment previews */}
-        {stagedPreviews.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {stagedPreviews.map((p, i) => (
+        {/* Upload previews staging */}
+        {stagingList.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2 animate-in fade-in duration-200">
+            {stagingList.map((p, i) => (
               <div
                 key={i}
-                className="flex items-center gap-1.5 bg-muted/70 border border-border text-foreground rounded-lg px-2.5 py-1.5 text-xs font-medium max-w-[180px]"
+                className="flex items-center gap-1.5 bg-muted border border-border text-foreground rounded-lg px-2.5 py-1.5 text-xs font-medium max-w-[180px]"
               >
-                {p.type.startsWith("image/")
-                  ? <ImageIcon className="h-3.5 w-3.5 text-primary shrink-0" />
-                  : <FileText className="h-3.5 w-3.5 text-primary shrink-0" />}
+                {p.type.startsWith("image/") ? (
+                  <ImageIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                )}
                 <span className="truncate flex-1">{p.name}</span>
                 <button
                   type="button"
                   onClick={() => removeStaged(i)}
-                  className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                  className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -615,15 +680,19 @@ export function AssistantChatArea({
         />
 
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          {/* Paperclip — direct to file picker */}
+          {/* Paperclip */}
           <button
             type="button"
             onClick={openFilePicker}
-            disabled={isLoading}
-            className="shrink-0 w-9 h-9 rounded-full bg-muted/80 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all disabled:opacity-50"
+            disabled={isLoading || isUploading}
+            className="shrink-0 w-9 h-9 rounded-full bg-muted/80 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all disabled:opacity-50 cursor-pointer"
             title="Lampirkan file (PDF / Gambar)"
           >
-            <Paperclip className="h-4 w-4" />
+            {isUploading ? (
+              <span className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            ) : (
+              <Paperclip className="h-4 w-4" />
+            )}
           </button>
 
           {/* Text input */}
@@ -631,7 +700,7 @@ export function AssistantChatArea({
             value={input}
             onChange={handleInputChange}
             placeholder={chatId ? "Ask AiDen anything..." : "Tulis pesan pertama untuk memulai..."}
-            disabled={isLoading}
+            disabled={isLoading || isUploading}
             className="flex-1 h-10 px-4 rounded-full bg-muted/40 border border-border focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:outline-none text-sm transition-all"
           />
 
@@ -640,7 +709,7 @@ export function AssistantChatArea({
             <button
               type="button"
               onClick={stop}
-              className="shrink-0 w-9 h-9 rounded-full bg-destructive flex items-center justify-center text-white hover:brightness-110 transition-all shadow-md"
+              className="shrink-0 w-9 h-9 rounded-full bg-destructive flex items-center justify-center text-white hover:brightness-110 transition-all shadow-md cursor-pointer"
               title="Hentikan"
             >
               <Square className="h-3.5 w-3.5 fill-white" />
@@ -648,15 +717,15 @@ export function AssistantChatArea({
           ) : (
             <button
               type="submit"
-              disabled={!input.trim() && stagedFiles.length === 0}
-              className="shrink-0 w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              disabled={(!input.trim() && stagingList.length === 0) || isUploading}
+              className="shrink-0 w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm cursor-pointer"
             >
               <Send className="h-3.5 w-3.5" />
             </button>
           )}
         </form>
         <p className="mt-1.5 text-center text-[10px] text-muted-foreground/60 tracking-widest uppercase">
-          Aiden Intelligence Engine · v2.0.4
+          Aiden Intelligence Engine · v2.1.0
         </p>
       </div>
     </div>

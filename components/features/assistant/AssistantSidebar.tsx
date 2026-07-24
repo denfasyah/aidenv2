@@ -5,6 +5,7 @@ import {
   Plus, Search, MoreVertical, Edit2, Trash2, MessageSquare, Check, X
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import Swal from "sweetalert2"
 
 interface Chat {
   id: string
@@ -22,7 +23,6 @@ interface AssistantSidebarProps {
   loadingChats: boolean
 }
 
-// ─── Skeleton item ────────────────────────────────────────────────────────────
 function ChatSkeleton() {
   return (
     <div className="p-3.5 rounded-xl border border-transparent animate-pulse space-y-2">
@@ -42,27 +42,40 @@ export function AssistantSidebar({
   loadingChats,
 }: AssistantSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  // Inline edit state — holds the id being edited and current draft value
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editDraft, setEditDraft] = useState("")
 
   const filtered = chats.filter((c) =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const startEdit = (chat: Chat) => {
-    setEditingId(chat.id)
-    setEditDraft(chat.title)
-  }
+  const handleEditTitle = async (chat: Chat) => {
+    const isDark = document.documentElement.classList.contains("dark")
+    const { value: newTitle } = await Swal.fire({
+      title: "Ubah Judul Percakapan",
+      input: "text",
+      inputPlaceholder: "Masukkan judul baru...",
+      inputValue: chat.title,
+      showCancelButton: true,
+      confirmButtonText: "Simpan",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "var(--primary, #16a34a)",
+      background: isDark ? "#0d1221" : "#ffffff",
+      color: isDark ? "#f3f4f6" : "#1f2937",
+      customClass: {
+        popup: "rounded-2xl border border-border",
+        input: "bg-background border-border text-foreground rounded-lg"
+      },
+      preConfirm: (value) => {
+        if (!value || !value.trim()) {
+          Swal.showValidationMessage("Judul tidak boleh kosong")
+        }
+        return value
+      }
+    })
 
-  const commitEdit = (id: string) => {
-    if (editDraft.trim() && editDraft.trim() !== chats.find((c) => c.id === id)?.title) {
-      onRenameChat(id, editDraft.trim())
+    if (newTitle && newTitle.trim()) {
+      onRenameChat(chat.id, newTitle.trim())
     }
-    setEditingId(null)
   }
-
-  const cancelEdit = () => setEditingId(null)
 
   const relativeTime = (dateStr: string): string => {
     try {
@@ -87,7 +100,7 @@ export function AssistantSidebar({
       <div className="p-4 shrink-0 border-b border-sidebar-border">
         <button
           onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl py-2.5 text-sm transition-all"
+          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl py-2.5 text-sm transition-all cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           New Conversation
@@ -128,7 +141,6 @@ export function AssistantSidebar({
         ) : (
           filtered.map((chat) => {
             const isActive = chat.id === activeChatId
-            const isEditing = chat.id === editingId
 
             return (
               <div
@@ -138,92 +150,56 @@ export function AssistantSidebar({
                     ? "bg-sidebar-accent border-sidebar-accent text-sidebar-accent-foreground"
                     : "border-transparent hover:bg-sidebar-accent/40 text-sidebar-foreground cursor-pointer"
                 }`}
-                onClick={() => !isEditing && onSelectChat(chat.id)}
+                onClick={() => onSelectChat(chat.id)}
               >
                 <div className="px-3 py-3 pr-9">
-                  {isEditing ? (
-                    // ── Inline edit input ──────────────────────────────────
-                    <div
-                      className="flex items-center gap-1.5"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        autoFocus
-                        value={editDraft}
-                        onChange={(e) => setEditDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") commitEdit(chat.id)
-                          if (e.key === "Escape") cancelEdit()
-                        }}
-                        className="flex-1 min-w-0 bg-background border border-primary/60 rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                      <button
-                        onClick={() => commitEdit(chat.id)}
-                        className="p-0.5 rounded text-primary hover:bg-primary/10"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="p-0.5 rounded text-muted-foreground hover:bg-muted"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    // ── Normal view ───────────────────────────────────────
-                    <>
-                      <p className="font-medium text-xs leading-snug truncate">{chat.title}</p>
-                      <span className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
-                        <MessageSquare className="h-2.5 w-2.5 shrink-0" />
-                        {relativeTime(chat.created_at)}
-                      </span>
-                    </>
-                  )}
+                  <p className="font-medium text-xs leading-snug truncate">{chat.title}</p>
+                  <span className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                    <MessageSquare className="h-2.5 w-2.5 shrink-0" />
+                    {relativeTime(chat.created_at)}
+                  </span>
                 </div>
 
-                {/* Three-dots menu — always rendered, opacity trick */}
-                {!isEditing && (
-                  <div
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            isActive
-                              ? "text-sidebar-accent-foreground/70 hover:bg-white/10"
-                              : "text-muted-foreground hover:bg-sidebar-accent/60"
-                          }`}
-                        >
-                          <MoreVertical className="h-3.5 w-3.5" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        side="bottom"
-                        sideOffset={4}
-                        className="w-36 bg-popover border-border shadow-xl z-[200]"
+                {/* Three-dots menu */}
+                <div
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          isActive
+                            ? "text-sidebar-accent-foreground/70 hover:bg-white/10"
+                            : "text-muted-foreground hover:bg-sidebar-accent/60"
+                        }`}
                       >
-                        <DropdownMenuItem
-                          onClick={() => startEdit(chat)}
-                          className="flex items-center gap-2 text-xs cursor-pointer"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                          Edit Judul
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => onDeleteChat(chat.id)}
-                          className="flex items-center gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Hapus
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      side="bottom"
+                      sideOffset={4}
+                      className="w-36 bg-popover border-border shadow-xl z-[200]"
+                    >
+                      <DropdownMenuItem
+                        onClick={() => handleEditTitle(chat)}
+                        className="flex items-center gap-2 text-xs cursor-pointer"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Edit Judul
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onDeleteChat(chat.id)}
+                        className="flex items-center gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Hapus
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             )
           })
