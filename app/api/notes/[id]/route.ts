@@ -93,6 +93,32 @@ export async function DELETE(
       return new Response("Failed to delete note", { status: 500 })
     }
 
+    // Mark note as deleted in activity logs
+    try {
+      const { data: logs } = await supabase
+        .from("activity_logs")
+        .select("id, details")
+        .eq("user_id", user.id)
+        .eq("action_type", "CREATE_NOTE")
+
+      if (logs) {
+        const targetLog = logs.find((l: any) => l.details?.note_id === id)
+        if (targetLog) {
+          await supabase
+            .from("activity_logs")
+            .update({
+              details: {
+                ...targetLog.details,
+                note_deleted: true
+              }
+            })
+            .eq("id", targetLog.id)
+        }
+      }
+    } catch (e) {
+      console.error("Error updating activity log for deleted note:", e)
+    }
+
     return Response.json({ success: true })
   } catch (err) {
     console.error("DELETE Note API Error:", err)

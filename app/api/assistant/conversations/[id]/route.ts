@@ -64,6 +64,32 @@ export async function DELETE(
       return new NextResponse(error.message, { status: 500 })
     }
 
+    // Mark chat as deleted in activity logs
+    try {
+      const { data: logs } = await supabase
+        .from("activity_logs")
+        .select("id, details")
+        .eq("user_id", user.id)
+        .eq("action_type", "ASSISTANT_CHAT")
+
+      if (logs) {
+        const targetLog = logs.find((l: any) => l.details?.target_url === `/assistant?chat=${id}`)
+        if (targetLog) {
+          await supabase
+            .from("activity_logs")
+            .update({
+              details: {
+                ...targetLog.details,
+                chat_deleted: true
+              }
+            })
+            .eq("id", targetLog.id)
+        }
+      }
+    } catch (e) {
+      console.error("Error updating activity log for deleted chat:", e)
+    }
+
     return new NextResponse("Deleted", { status: 200 })
   } catch (error) {
     console.error("Conversation DELETE Error:", error)

@@ -158,16 +158,27 @@ ATURAN KETAT:
       savedSummary = inserted
     }
 
-    // 6. Record Activity Log (Upsert concept: UPSERT_SUMMARY)
-    await supabase.from("activity_logs").insert({
-      user_id: user.id,
-      workspace_id: workspaceId,
-      action_type: "GENERATE_SUMMARY",
-      details: {
-        title: workspaceTitle,
-        target_url: `/workspaces/${workspaceId}?tab=summary`,
-      },
-    })
+    // 6. Record Activity Log — update timestamp on regenerate, insert on first generate
+    if (!existingSummary) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        workspace_id: workspaceId,
+        action_type: "GENERATE_SUMMARY",
+        details: {
+          title: workspaceTitle,
+          target_url: `/workspaces/${workspaceId}?tab=summary`,
+        },
+      })
+    } else {
+      await supabase
+        .from("activity_logs")
+        .update({
+          created_at: new Date().toISOString()
+        })
+        .eq("user_id", user.id)
+        .eq("workspace_id", workspaceId)
+        .eq("action_type", "GENERATE_SUMMARY")
+    }
 
     return Response.json({
       summary: savedSummary,

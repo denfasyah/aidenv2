@@ -177,17 +177,34 @@ ATURAN KETAT:
       savedQuiz = inserted
     }
 
-    // 8. Log activity
-    await supabase.from("activity_logs").insert({
-      user_id: user.id,
-      workspace_id: workspaceId,
-      action_type: "GENERATE_QUIZ",
-      details: {
-        title: workspaceTitle,
-        target_url: `/workspaces/${workspaceId}?tab=quiz`,
-        questionCount: count,
-      },
-    })
+    // 8. Log activity — update details and timestamp on regenerate, insert on first generate
+    // (Attempt quiz tetap dicatat terpisah via submit-attempt route)
+    if (!existing) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        workspace_id: workspaceId,
+        action_type: "GENERATE_QUIZ",
+        details: {
+          title: workspaceTitle,
+          target_url: `/workspaces/${workspaceId}?tab=quiz`,
+          questionCount: count,
+        },
+      })
+    } else {
+      await supabase
+        .from("activity_logs")
+        .update({
+          created_at: new Date().toISOString(),
+          details: {
+            title: workspaceTitle,
+            target_url: `/workspaces/${workspaceId}?tab=quiz`,
+            questionCount: count,
+          }
+        })
+        .eq("user_id", user.id)
+        .eq("workspace_id", workspaceId)
+        .eq("action_type", "GENERATE_QUIZ")
+    }
 
     return Response.json({ quiz: savedQuiz, cached: false })
   } catch (error: unknown) {

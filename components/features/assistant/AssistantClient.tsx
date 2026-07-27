@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { AssistantSidebar } from "@/components/features/assistant/AssistantSidebar"
 import { AssistantChatArea } from "@/components/features/assistant/AssistantChatArea"
 import { Menu, X } from "lucide-react"
@@ -13,6 +14,9 @@ interface Chat {
 }
 
 export function AssistantClient() {
+  const searchParams = useSearchParams()
+  const chatParam = searchParams.get("chat")
+
   const [chats, setChats] = useState<Chat[]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [loadingChats, setLoadingChats] = useState(true)
@@ -25,7 +29,9 @@ export function AssistantClient() {
       if (res.ok) {
         const data = await res.json()
         setChats(data)
-        if (data.length > 0 && !activeChatId) {
+        if (chatParam && data.some((c: Chat) => c.id === chatParam)) {
+          setActiveChatId(chatParam)
+        } else if (data.length > 0 && !activeChatId) {
           setActiveChatId(data[0].id)
         }
       }
@@ -40,6 +46,12 @@ export function AssistantClient() {
     fetchConversations()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (chatParam && chats.some((c) => c.id === chatParam)) {
+      setActiveChatId(chatParam)
+    }
+  }, [chatParam, chats])
 
   const handleNewChat = () => {
     setActiveChatId(null)

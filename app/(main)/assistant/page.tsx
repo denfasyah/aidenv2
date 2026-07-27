@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { createClient } from "@/utils/supabase/server"
 import { AssistantClient } from "@/components/features/assistant/AssistantClient"
@@ -10,5 +11,9 @@ export default async function AssistantPage() {
     redirect("/login")
   }
 
-  return <AssistantClient />
+  return (
+    <Suspense fallback={<div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">Loading Assistant...</div>}>
+      <AssistantClient />
+    </Suspense>
+  )
 }

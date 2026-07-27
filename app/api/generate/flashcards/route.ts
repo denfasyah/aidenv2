@@ -163,17 +163,33 @@ ATURAN KETAT:
       savedFlashcard = inserted
     }
 
-    // 8. Activity Log (Upsert-style: action per generate)
-    await supabase.from("activity_logs").insert({
-      user_id: user.id,
-      workspace_id: workspaceId,
-      action_type: "GENERATE_FLASHCARD",
-      details: {
-        title: workspaceTitle,
-        target_url: `/workspaces/${workspaceId}?tab=flashcard`,
-        cardCount: count,
-      },
-    })
+    // 8. Activity Log — update details and timestamp on regenerate, insert on first generate
+    if (!existing) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        workspace_id: workspaceId,
+        action_type: "GENERATE_FLASHCARD",
+        details: {
+          title: workspaceTitle,
+          target_url: `/workspaces/${workspaceId}?tab=flashcard`,
+          cardCount: count,
+        },
+      })
+    } else {
+      await supabase
+        .from("activity_logs")
+        .update({
+          created_at: new Date().toISOString(),
+          details: {
+            title: workspaceTitle,
+            target_url: `/workspaces/${workspaceId}?tab=flashcard`,
+            cardCount: count,
+          }
+        })
+        .eq("user_id", user.id)
+        .eq("workspace_id", workspaceId)
+        .eq("action_type", "GENERATE_FLASHCARD")
+    }
 
     return Response.json({ flashcards: savedFlashcard, cached: false })
   } catch (error: unknown) {
