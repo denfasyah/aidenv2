@@ -158,7 +158,7 @@ ATURAN KETAT:
       savedSummary = inserted
     }
 
-    // 6. Record Activity Log — hanya saat PERTAMA KALI generate, bukan regenerate
+    // 6. Record Activity Log — update timestamp on regenerate, insert on first generate
     if (!existingSummary) {
       await supabase.from("activity_logs").insert({
         user_id: user.id,
@@ -169,6 +169,15 @@ ATURAN KETAT:
           target_url: `/workspaces/${workspaceId}?tab=summary`,
         },
       })
+    } else {
+      await supabase
+        .from("activity_logs")
+        .update({
+          created_at: new Date().toISOString()
+        })
+        .eq("user_id", user.id)
+        .eq("workspace_id", workspaceId)
+        .eq("action_type", "GENERATE_SUMMARY")
     }
 
     return Response.json({

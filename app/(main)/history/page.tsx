@@ -44,6 +44,39 @@ export default async function HistoryPage({ searchParams }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
+  // Deduplicate GENERATE_FLASHCARD, GENERATE_QUIZ, GENERATE_SUMMARY per workspace globally for the user
+  try {
+    const { data: allLogs } = await supabase
+      .from("activity_logs")
+      .select("id, action_type, workspace_id, created_at")
+      .eq("user_id", user.id)
+      .in("action_type", ["GENERATE_FLASHCARD", "GENERATE_QUIZ", "GENERATE_SUMMARY"])
+      .order("created_at", { ascending: false })
+
+    if (allLogs && allLogs.length > 0) {
+      const seenKeys = new Set<string>()
+      const duplicateIds: string[] = []
+      for (const l of allLogs) {
+        if (l.workspace_id) {
+          const key = `${l.action_type}_${l.workspace_id}`
+          if (seenKeys.has(key)) {
+            duplicateIds.push(l.id)
+          } else {
+            seenKeys.add(key)
+          }
+        }
+      }
+      if (duplicateIds.length > 0) {
+        await supabase
+          .from("activity_logs")
+          .delete()
+          .in("id", duplicateIds)
+      }
+    }
+  } catch (e) {
+    console.error("Deduplication error in HistoryPage:", e)
+  }
+
   const from = (page - 1) * PAGE_SIZE
   const to   = from + PAGE_SIZE - 1
 
