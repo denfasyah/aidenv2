@@ -236,7 +236,7 @@ export function HistoryCard({ log }: HistoryCardProps) {
       {!isDeleted && targetUrl && (
         <Link
           href={targetUrl}
-          className="flex-shrink-0 inline-flex items-center gap-1 h-7 px-2.5 text-[11px] font-semibold rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-150 opacity-0 group-hover:opacity-100"
+          className="flex-shrink-0 inline-flex items-center gap-1 h-7 px-2.5 text-[11px] font-semibold rounded-lg bg-primary text-primary-foreground transition-all duration-150"
         >
           Buka
           <ExternalLink className="h-3 w-3" />

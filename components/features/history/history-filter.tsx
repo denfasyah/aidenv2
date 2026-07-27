@@ -4,12 +4,16 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useTransition } from "react"
 import { Filter } from "lucide-react"
 
+// Filter group → label yang ditampilkan
+// value adalah key group, bukan action_type langsung
 const FILTER_OPTIONS = [
-  { value: "ALL",                label: "Semua Aktivitas"   },
-  { value: "GENERATE_FLASHCARD", label: "Generate Flashcard" },
-  { value: "GENERATE_QUIZ",      label: "Generate Quiz"      },
-  { value: "GENERATE_SUMMARY",   label: "Generate Summary"   },
-  { value: "ASSISTANT_CHAT",     label: "Assistant Chat"     },
+  { value: "ALL",       label: "Semua Aktivitas"  },
+  { value: "FLASHCARD", label: "Flashcard"         },
+  { value: "QUIZ",      label: "Quiz"              },
+  { value: "SUMMARY",   label: "Ringkasan"         },
+  { value: "NOTE",      label: "Catatan"           },
+  { value: "WORKSPACE", label: "Workspace"         },
+  { value: "CHAT",      label: "AI Chat"           },
 ]
 
 /**
@@ -17,8 +21,8 @@ const FILTER_OPTIONS = [
  * State berbasis URL (searchParams) — konsisten dengan WorkspaceControls.
  */
 export function HistoryFilter() {
-  const router      = useRouter()
-  const pathname    = usePathname()
+  const router       = useRouter()
+  const pathname     = usePathname()
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
@@ -40,7 +44,7 @@ export function HistoryFilter() {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
       <span className="text-sm text-muted-foreground whitespace-nowrap">
-        Filter berdasarkan jenis aktivitas:
+        Filter aktivitas:
       </span>
       <div className="relative flex-shrink-0">
         <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />

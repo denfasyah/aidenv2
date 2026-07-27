@@ -3,6 +3,25 @@ import { createClient } from "@/utils/supabase/server"
 
 const PAGE_SIZE = 6
 
+const mapFilterToActions = (type: string): string[] | null => {
+  switch (type) {
+    case "FLASHCARD":
+      return ["GENERATE_FLASHCARD"]
+    case "QUIZ":
+      return ["GENERATE_QUIZ", "SUBMIT_QUIZ_ATTEMPT"]
+    case "SUMMARY":
+      return ["GENERATE_SUMMARY"]
+    case "NOTE":
+      return ["CREATE_NOTE"]
+    case "WORKSPACE":
+      return ["CREATE_WORKSPACE", "DELETE_WORKSPACE"]
+    case "CHAT":
+      return ["ASSISTANT_CHAT"]
+    default:
+      return null
+  }
+}
+
 export async function GET(req: Request) {
   try {
     const supabase = (await createClient()) as any
@@ -37,7 +56,10 @@ export async function GET(req: Request) {
       .range(from, to)
 
     if (type && type !== "ALL") {
-      query = query.eq("action_type", type)
+      const actions = mapFilterToActions(type)
+      if (actions) {
+        query = query.in("action_type", actions)
+      }
     }
 
     const { data: logs, error, count } = await query
