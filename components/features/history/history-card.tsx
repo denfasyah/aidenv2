@@ -175,8 +175,11 @@ export function HistoryCard({ log }: HistoryCardProps) {
   const targetUrl = log.details?.target_url
   const description = config.getDescription(log)
 
-  // Workspace sudah dihapus jika workspace_id ada tapi join workspaces null
-  const isDeleted = log.workspace_id !== null && log.workspaces === null
+  const isWorkspaceDeleted = log.workspace_id !== null && log.workspaces === null
+  const isNoteDeleted = log.action_type === "CREATE_NOTE" && (log.details as any)?.note_deleted === true
+  const isChatDeleted = log.action_type === "ASSISTANT_CHAT" && (log.details as any)?.chat_deleted === true
+
+  const isDeleted = isWorkspaceDeleted || isNoteDeleted || isChatDeleted
 
   const formattedDate = format(new Date(log.created_at), "dd MMM yyyy, HH:mm", {
     locale: localeId,
@@ -223,10 +226,22 @@ export function HistoryCard({ log }: HistoryCardProps) {
           )}
 
           {/* Deleted badge */}
-          {isDeleted && (
+          {isWorkspaceDeleted && (
             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive">
               <Trash2 className="h-2.5 w-2.5" />
               Workspace dihapus
+            </span>
+          )}
+          {isNoteDeleted && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive">
+              <Trash2 className="h-2.5 w-2.5" />
+              Catatan dihapus
+            </span>
+          )}
+          {isChatDeleted && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive">
+              <Trash2 className="h-2.5 w-2.5" />
+              Chat dihapus
             </span>
           )}
         </div>

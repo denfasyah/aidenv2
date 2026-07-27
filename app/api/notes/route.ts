@@ -90,7 +90,7 @@ export async function POST(req: Request) {
           user_id: user.id,
           workspace_id: targetWorkspaceId || null,
           action_type: "CREATE_NOTE",
-          details: { title, target_url: "/notes" },
+          details: { title, target_url: "/notes", note_id: retryNote.id },
         })
 
         return Response.json({ note: retryNote })
@@ -107,6 +107,7 @@ export async function POST(req: Request) {
       details: {
         title,
         target_url: "/notes",
+        note_id: newNote.id,
       },
     })
 
