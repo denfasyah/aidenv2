@@ -158,16 +158,18 @@ ATURAN KETAT:
       savedSummary = inserted
     }
 
-    // 6. Record Activity Log (Upsert concept: UPSERT_SUMMARY)
-    await supabase.from("activity_logs").insert({
-      user_id: user.id,
-      workspace_id: workspaceId,
-      action_type: "GENERATE_SUMMARY",
-      details: {
-        title: workspaceTitle,
-        target_url: `/workspaces/${workspaceId}?tab=summary`,
-      },
-    })
+    // 6. Record Activity Log — hanya saat PERTAMA KALI generate, bukan regenerate
+    if (!existingSummary) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        workspace_id: workspaceId,
+        action_type: "GENERATE_SUMMARY",
+        details: {
+          title: workspaceTitle,
+          target_url: `/workspaces/${workspaceId}?tab=summary`,
+        },
+      })
+    }
 
     return Response.json({
       summary: savedSummary,

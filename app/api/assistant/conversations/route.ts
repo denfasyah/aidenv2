@@ -58,6 +58,17 @@ export async function POST(req: Request) {
       return new NextResponse(error.message, { status: 500 })
     }
 
+    // Log aktivitas percakapan baru ke activity_logs
+    await supabase.from("activity_logs").insert({
+      user_id: user.id,
+      workspace_id: null,
+      action_type: "ASSISTANT_CHAT",
+      details: {
+        title: chat.title,
+        target_url: `/assistant?chat=${chat.id}`,
+      },
+    })
+
     return NextResponse.json(chat)
   } catch (error) {
     console.error("Conversations POST Error:", error)

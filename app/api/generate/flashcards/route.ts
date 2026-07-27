@@ -163,17 +163,19 @@ ATURAN KETAT:
       savedFlashcard = inserted
     }
 
-    // 8. Activity Log (Upsert-style: action per generate)
-    await supabase.from("activity_logs").insert({
-      user_id: user.id,
-      workspace_id: workspaceId,
-      action_type: "GENERATE_FLASHCARD",
-      details: {
-        title: workspaceTitle,
-        target_url: `/workspaces/${workspaceId}?tab=flashcard`,
-        cardCount: count,
-      },
-    })
+    // 8. Activity Log — hanya dicatat saat PERTAMA KALI generate, bukan saat regenerate
+    if (!existing) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        workspace_id: workspaceId,
+        action_type: "GENERATE_FLASHCARD",
+        details: {
+          title: workspaceTitle,
+          target_url: `/workspaces/${workspaceId}?tab=flashcard`,
+          cardCount: count,
+        },
+      })
+    }
 
     return Response.json({ flashcards: savedFlashcard, cached: false })
   } catch (error: unknown) {
