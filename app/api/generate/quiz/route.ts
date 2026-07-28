@@ -190,6 +190,13 @@ ATURAN KETAT:
           questionCount: count,
         },
       })
+
+      // Kirim notifikasi ke user
+      await supabase.from("notifications").insert({
+        user_id: user.id,
+        title: "Quiz Selesai Dibuat",
+        message: `Kamu berhasil generate ${count} soal quiz dari "${workspaceTitle}".`,
+      })
     } else {
       await supabase
         .from("activity_logs")
