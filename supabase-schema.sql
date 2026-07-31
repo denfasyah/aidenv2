@@ -145,7 +145,9 @@ create policy "Users can insert messages to their chats" on messages for insert 
 );
 
 create policy "Users can view own notifications" on notifications for select using (auth.uid() = user_id);
+create policy "Users can insert own notifications" on notifications for insert with check (auth.uid() = user_id);
 create policy "Users can update own notifications" on notifications for update using (auth.uid() = user_id);
+create policy "Users can delete own notifications" on notifications for delete using (auth.uid() = user_id);
 
 create policy "Users can view own activity logs" on activity_logs for select using (auth.uid() = user_id);
 create policy "Users can insert own activity logs" on activity_logs for insert with check (auth.uid() = user_id);

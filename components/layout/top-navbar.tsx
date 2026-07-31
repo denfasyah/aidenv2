@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Bell, Menu, User, LogOut, Settings } from "lucide-react"
+import { Bell, Menu, User, LogOut } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
@@ -33,6 +33,20 @@ export function TopNavbar({ userName, userEmail }: TopNavbarProps) {
 
   const [mobileOpen,  setMobileOpen]  = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef                    = useRef<HTMLDivElement>(null)
+
+  // Klik di luar dropdown untuk menutupnya
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
 
   // Deteksi login sukses dari URL setelah Google OAuth
   useEffect(() => {
@@ -99,50 +113,60 @@ export function TopNavbar({ userName, userEmail }: TopNavbarProps) {
             )}
           </Link>
 
-          {/* Area Profil */}
-          <div
-            className="flex items-center gap-3 pl-2 sm:pl-3 sm:border-l border-border/40 cursor-pointer select-none"
-            onClick={() => setProfileOpen(!profileOpen)}
-          >
-            <div className="hidden sm:flex flex-col items-end leading-tight">
-              <span className="text-sm font-medium text-foreground">{userName || "User"}</span>
-              <span className="text-xs text-muted-foreground">{userEmail || ""}</span>
+          {/* Area Profil dengan ref wrapper */}
+          <div ref={profileRef} className="relative flex items-center">
+            <div
+              className="flex items-center gap-3 pl-2 sm:pl-3 sm:border-l border-border/40 cursor-pointer select-none"
+              onClick={() => setProfileOpen(!profileOpen)}
+            >
+              <div className="hidden sm:flex flex-col items-end leading-tight">
+                <span className="text-sm font-medium text-foreground">{userName || "User"}</span>
+                <span className="text-xs text-muted-foreground">{userEmail || ""}</span>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 hover:bg-primary/30 transition-colors">
+                <User className="h-4 w-4 text-primary" />
+              </div>
             </div>
-            <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 hover:bg-primary/30 transition-colors">
-              <User className="h-4 w-4 text-primary" />
-            </div>
+
+            {/* Dropdown Profil */}
+            <AnimatePresence>
+              {profileOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-11 w-56 rounded-xl border border-border/50 bg-card shadow-xl overflow-hidden z-50"
+                >
+                  {/* Info User (hanya muncul di mobile) */}
+                  <div className="p-4 border-b border-border/40 sm:hidden">
+                    <p className="text-sm font-medium text-foreground truncate">{userName || "User"}</p>
+                    <p className="text-xs text-muted-foreground truncate">{userEmail || ""}</p>
+                  </div>
+
+                  <div className="p-1">
+                    <DropdownItem
+                      icon={User}
+                      label="Profil Saya"
+                      onClick={() => {
+                        setProfileOpen(false)
+                        router.push("/profile")
+                      }}
+                    />
+                    <DropdownItem
+                      icon={LogOut}
+                      label="Keluar"
+                      destructive
+                      onClick={() => {
+                        setProfileOpen(false)
+                        handleLogout()
+                      }}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-
-          {/* Dropdown Profil */}
-          <AnimatePresence>
-            {profileOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 top-14 w-56 rounded-xl border border-border/50 bg-card shadow-xl overflow-hidden z-50"
-                onBlur={() => setProfileOpen(false)}
-              >
-                {/* Info User (hanya muncul di mobile) */}
-                <div className="p-4 border-b border-border/40 sm:hidden">
-                  <p className="text-sm font-medium text-foreground truncate">{userName || "User"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{userEmail || ""}</p>
-                </div>
-
-                <div className="p-1">
-                  <DropdownItem icon={User} label="Profil Saya" onClick={() => setProfileOpen(false)} />
-                  <DropdownItem icon={Settings} label="Pengaturan" onClick={() => setProfileOpen(false)} />
-                  <DropdownItem
-                    icon={LogOut}
-                    label="Keluar"
-                    destructive
-                    onClick={() => { setProfileOpen(false); handleLogout() }}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </header>
 
