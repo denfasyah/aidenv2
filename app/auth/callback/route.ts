@@ -13,8 +13,9 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-    if (!error) {
+    if (error) {
+      console.error("Supabase exchangeCodeForSession error:", error)
+    } else {
       // Tambahkan param success=true agar dashboard tahu user baru login
       return NextResponse.redirect(`${origin}${next}?success=true`)
     }
