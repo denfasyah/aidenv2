@@ -7,8 +7,9 @@ import { id as localeId } from "date-fns/locale"
 import { FolderKanban, MoreVertical, Trash2, Pencil, Star, Play, FileText, Calendar } from "lucide-react"
 import { Button } from "@/components/ui"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { deleteWorkspace, toggleFavoriteWorkspace } from "@/app/(main)/workspaces/actions"
+import { deleteWorkspace, toggleFavoriteWorkspace, updateWorkspace } from "@/app/(main)/workspaces/actions"
 import { showAlert } from "@/lib/swal"
+import Swal from "sweetalert2"
 
 interface WorkspaceCardProps {
   id: string
@@ -22,9 +23,9 @@ export function WorkspaceCard({ id, title, description, createdAt, isFavorite }:
   const [favorite, setFavorite] = useState(isFavorite)
   const [loadingFav, setLoadingFav] = useState(false)
 
-  const timeAgo = formatDistanceToNow(new Date(createdAt), { 
-    addSuffix: true, 
-    locale: localeId 
+  const timeAgo = formatDistanceToNow(new Date(createdAt), {
+    addSuffix: true,
+    locale: localeId
   })
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -39,6 +40,47 @@ export function WorkspaceCard({ id, title, description, createdAt, isFavorite }:
       const res = await deleteWorkspace(id)
       if (res?.error) showAlert.error("Gagal", res.error)
       else showAlert.success("Terhapus", "Workspace berhasil dihapus.")
+    }
+  }
+
+  const handleEdit = async (e: React.MouseEvent) => {
+    e.preventDefault()
+
+    const { value: formValues } = await Swal.fire({
+      title: "Edit Workspace",
+      html: `
+        <input id="swal-title" class="swal2-input" placeholder="Judul workspace" value="${title}" />
+        <input id="swal-desc" class="swal2-input" placeholder="Deskripsi (opsional)" value="${description ?? ""}" />
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: "Simpan",
+      cancelButtonText: "Batal",
+      background: "hsl(var(--card-bg))",
+      color: "hsl(var(--card-fg))",
+      buttonsStyling: false,
+      customClass: {
+        popup: "swal-popup-custom",
+        confirmButton: "swal-btn-primary",
+        cancelButton: "swal-btn-cancel",
+        actions: "swal-actions-row",
+      },
+      preConfirm: () => {
+        const newTitle = (document.getElementById("swal-title") as HTMLInputElement)?.value?.trim()
+        const newDesc = (document.getElementById("swal-desc") as HTMLInputElement)?.value?.trim()
+        if (!newTitle) {
+          Swal.showValidationMessage("Judul tidak boleh kosong")
+          return null
+        }
+        return [newTitle, newDesc]
+      },
+    })
+
+    if (formValues) {
+      const [newTitle, newDesc] = formValues as [string, string]
+      const res = await updateWorkspace(id, newTitle, newDesc)
+      if (res?.error) showAlert.error("Gagal", res.error)
+      else showAlert.success("Berhasil", "Workspace berhasil diperbarui.")
     }
   }
 
@@ -69,8 +111,8 @@ export function WorkspaceCard({ id, title, description, createdAt, isFavorite }:
             onClick={handleFavorite}
             disabled={loadingFav}
             className={`p-1.5 rounded-lg transition-colors ${
-              favorite 
-                ? "text-yellow-400 hover:text-yellow-500" 
+              favorite
+                ? "text-yellow-400 hover:text-yellow-500"
                 : "text-muted-foreground hover:text-yellow-400"
             }`}
             title={favorite ? "Hapus dari favorit" : "Tambah ke favorit"}
@@ -86,19 +128,15 @@ export function WorkspaceCard({ id, title, description, createdAt, isFavorite }:
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-40">
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="cursor-pointer gap-2"
-                onClick={(e) => {
-                  e.preventDefault()
-                  // TODO: open edit dialog
-                  showAlert.error("Segera Hadir", "Fitur edit workspace sedang dalam pengembangan.")
-                }}
+                onClick={handleEdit}
               >
                 <Pencil className="h-4 w-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer gap-2"
                 onClick={handleDelete}
               >
