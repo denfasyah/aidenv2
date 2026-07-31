@@ -130,3 +130,36 @@ export async function toggleFavoriteWorkspace(id: string, currentStatus: boolean
   revalidatePath("/workspaces")
   return { success: true }
 }
+
+export async function updateWorkspace(id: string, title: string, description: string) {
+  const supabase = (await createClient()) as any
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { error: "Unauthorized" }
+
+  if (!title || !title.trim()) {
+    return { error: "Judul workspace tidak boleh kosong." }
+  }
+
+  const { error } = await supabase
+    .from("workspaces")
+    .update({ title: title.trim(), description: description.trim() })
+    .eq("id", id)
+    .eq("user_id", user.id)
+
+  if (error) {
+    console.error("Error updating workspace:", error.message)
+    return { error: "Gagal memperbarui workspace." }
+  }
+
+  // Log aktivitas
+  await supabase.from("activity_logs").insert([{
+    user_id: user.id,
+    action_type: "UPDATE_WORKSPACE",
+    details: { message: `Memperbarui workspace: ${title}` }
+  }])
+
+  revalidatePath("/workspaces")
+  revalidatePath("/dashboard")
+  return { success: true }
+}

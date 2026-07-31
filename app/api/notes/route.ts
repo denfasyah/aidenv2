@@ -93,6 +93,13 @@ export async function POST(req: Request) {
           details: { title, target_url: "/notes", note_id: retryNote.id },
         })
 
+        // Kirim notifikasi ke user
+        await supabase.from("notifications").insert({
+          user_id: user.id,
+          title: "Note Tersimpan",
+          message: `Note baru "${title}" berhasil ditambahkan.`,
+        })
+
         return Response.json({ note: retryNote })
       }
 
@@ -109,6 +116,13 @@ export async function POST(req: Request) {
         target_url: "/notes",
         note_id: newNote.id,
       },
+    })
+
+    // Kirim notifikasi ke user
+    await supabase.from("notifications").insert({
+      user_id: user.id,
+      title: "Note Tersimpan",
+      message: `Note baru "${title}" berhasil ditambahkan.`,
     })
 
     return Response.json({ note: newNote })

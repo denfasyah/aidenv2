@@ -69,6 +69,13 @@ export async function POST(req: Request) {
       },
     })
 
+    // Kirim notifikasi ke user
+    await supabase.from("notifications").insert({
+      user_id: user.id,
+      title: "AI Assistant Baru",
+      message: `Percakapan baru "${chat.title}" berhasil dimulai dengan AI.`,
+    })
+
     return NextResponse.json(chat)
   } catch (error) {
     console.error("Conversations POST Error:", error)

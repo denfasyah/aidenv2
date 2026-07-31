@@ -175,6 +175,13 @@ ATURAN KETAT:
           cardCount: count,
         },
       })
+
+      // Kirim notifikasi ke user
+      await supabase.from("notifications").insert({
+        user_id: user.id,
+        title: "Flashcard Berhasil Dibuat",
+        message: `${count} flashcard untuk workspace "${workspaceTitle}" berhasil digenerate.`,
+      })
     } else {
       await supabase
         .from("activity_logs")

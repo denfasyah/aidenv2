@@ -169,6 +169,13 @@ ATURAN KETAT:
           target_url: `/workspaces/${workspaceId}?tab=summary`,
         },
       })
+
+      // Kirim notifikasi ke user
+      await supabase.from("notifications").insert({
+        user_id: user.id,
+        title: "Ringkasan Berhasil Dibuat",
+        message: `Ringkasan dari dokumen "${workspaceTitle}" berhasil digenerate.`,
+      })
     } else {
       await supabase
         .from("activity_logs")
