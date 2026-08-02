@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<p align="center">
+  <img src="public/file.svg" alt="Aiden Logo" width="120" />
+</p>
 
-## Getting Started
+<h1 align="center">AIDEN</h1>
 
-First, run the development server:
+<p align="center">
+  Modern AI-Powered Study Platform built with Next.js, Supabase & Google Gemini API
+</p>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+<p align="center">
+  <a href="https://aiden-v2.vercel.app">🌐 Live Demo</a>
+</p>
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ✨ Overview
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Aiden** is a modern, AI-powered study platform designed to revolutionize the way students and professionals learn. 
 
-## Learn More
+It allows users to organize learning material into dedicated Workspaces, generate AI-powered Flashcards and Quizzes, summarize long study notes, write personal documents, and consult with a context-aware AI Chat Assistant.
 
-To learn more about Next.js, take a look at the following resources:
+Aiden focuses on sleek modern design, real-time interactivity, and productivity-boosting features to make studying smarter, not harder.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> ⚠️ Google Gemini API Key and Supabase project configurations are required to run the AI and database features.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🚀 Features
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- 📁 **Workspace Terpusat** (Group learning materials into organized folders)
+- ⚡ **AI Flashcard Generator** (Instantly generate custom study flashcards using AI)
+- 📝 **AI Quiz & Question Generator** (Auto-generate practice quizzes to test your knowledge)
+- 🧠 **AI Smart Summary** (Condense long notes or text into structured, easy-to-read summaries)
+- ✍️ **Built-in Notes Editor** (Create and manage manual notes within each workspace)
+- 💬 **AI Chat Assistant** (Context-aware chat bot that understands your workspace contents)
+- 📋 **Activity History & Logs** (Keep track of all study resources and modifications)
+- 🔔 **Real-time Notifications** (Get notified for system updates and user actions)
+- 🔐 **Supabase & Google Authentication** (Secure login and protected router setup)
+- 🎨 **Modern Dark & Light UI** (Beautiful interface built with Tailwind CSS and Framer Motion)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🛠️ Tech Stack
+
+| Category        | Technology |
+|----------------|-----------|
+| Frontend       | Next.js (App Router) / React.js |
+| Styling        | Tailwind CSS (v4) + Radix UI |
+| Backend (BaaS) | Supabase (Authentication & PostgreSQL Database) |
+| AI Integration | Google Gemini API (via Vercel AI SDK) |
+| Animation      | Framer Motion |
+| Icons          | Lucide React |
+| Notification   | SweetAlert2 |
+
+---
+
+## 📸 Screenshot
+
+<p align="center">
+  <img src="public/ss.png" width="90%" alt="Aiden UI Screenshot" />
+</p>
+
+---
+
+## 🔐 Authentication
+
+- Google Sign-In & Email Password (Supabase Auth)
+- Protected route middleware for dashboard, workspace, profile, and settings pages
+- Secure row-level security (RLS) policies on Supabase tables
+
+---
+
+## 🛠️ Build and Dev
+
+- Clone repository
+ ```sh
+  git clone https://github.com/denfasyah/aidenv2.git
+ ```
+
+- Install dependencies
+ ```sh
+  npm install
+ ```
+
+- 🔑 Environment Variables (Create a `.env.local` file and fill it in like this :)
+ ```env
+  NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+  GEMINI_API_KEY=your_gemini_api_key
+ ```
+
+- Run development server
+ ```sh
+  npm run dev
+ ```
+
+---
+
+## 📈 Future Improvements
+
+- 📄 **PDF Parser** (Upload study PDFs and let the AI process them automatically)
+- 👥 **Collaborative Workspaces** (Study together with your friends in real-time)
+- 📊 **Learning Progress Statistics** (Track quizzes completed and flashcards mastered)
+- ⚙️ **Advanced Profile Settings** (Custom notification preferences and interface customizers)
+  
+---
+
+## 📬 Contact / Feedback
+> If you have any feedback, suggestions, or issues:
+
+- 📩 Feel free to reach out via GitHub Issues
+- 💬 Or contact me directly
