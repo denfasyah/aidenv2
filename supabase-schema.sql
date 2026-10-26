@@ -7,8 +7,13 @@ drop table if exists chats cascade;
 drop table if exists summaries cascade;
 drop table if exists quizzes cascade;
 drop table if exists flashcards cascade;
+drop table if exists document_chunks cascade;
+drop table if exists documents cascade;
 drop table if exists workspaces cascade;
 drop table if exists users cascade; -- Formerly profiles
+
+-- Enable pgvector
+create extension if not exists vector with schema extensions;
 
 -- 1. USERS (Extends auth.users in public schema)
 create table users (
@@ -27,6 +32,58 @@ create table workspaces (
   description text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- 2b. DOCUMENTS
+create table documents (
+  id uuid default gen_random_uuid() primary key,
+  workspace_id uuid references workspaces(id) on delete cascade not null,
+  user_id uuid references users(id) on delete cascade not null,
+  name text not null,
+  storage_path text not null,
+  status text default 'pending' check (status in ('pending', 'processing', 'completed', 'failed')),
+  error_message text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 2c. DOCUMENT_CHUNKS
+create table document_chunks (
+  id uuid default gen_random_uuid() primary key,
+  document_id uuid references documents(id) on delete cascade not null,
+  workspace_id uuid references workspaces(id) on delete cascade not null,
+  content text not null,
+  embedding vector(768),
+  metadata jsonb,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Index for similarity search
+create index on document_chunks using hnsw (embedding vector_cosine_ops);
+
+-- Similarity search RPC
+create or replace function match_document_chunks (
+  query_embedding vector(768),
+  match_count int default 10,
+  filter_workspace_id uuid default null
+) returns table (
+  id uuid,
+  document_id uuid,
+  content text,
+  metadata jsonb,
+  similarity float
+)
+language sql stable
+as $$
+  select
+    document_chunks.id,
+    document_chunks.document_id,
+    document_chunks.content,
+    document_chunks.metadata,
+    1 - (document_chunks.embedding <=> query_embedding) as similarity
+  from document_chunks
+  where filter_workspace_id is null or document_chunks.workspace_id = filter_workspace_id
+  order by document_chunks.embedding <=> query_embedding
+  limit match_count;
+$$;
 
 -- 3. FLASHCARDS
 create table flashcards (
@@ -110,6 +167,8 @@ create table activity_logs (
 -- Enable RLS on all tables
 alter table users enable row level security;
 alter table workspaces enable row level security;
+alter table documents enable row level security;
+alter table document_chunks enable row level security;
 alter table flashcards enable row level security;
 alter table quizzes enable row level security;
 alter table summaries enable row level security;
@@ -127,6 +186,24 @@ create policy "Users can view own workspaces" on workspaces for select using (au
 create policy "Users can insert own workspaces" on workspaces for insert with check (auth.uid() = user_id);
 create policy "Users can update own workspaces" on workspaces for update using (auth.uid() = user_id);
 create policy "Users can delete own workspaces" on workspaces for delete using (auth.uid() = user_id);
+
+create policy "Users can view own documents" on documents for select using (auth.uid() = user_id);
+create policy "Users can insert own documents" on documents for insert with check (auth.uid() = user_id);
+create policy "Users can update own documents" on documents for update using (auth.uid() = user_id);
+create policy "Users can delete own documents" on documents for delete using (auth.uid() = user_id);
+
+create policy "Users can view own document_chunks" on document_chunks for select using (
+  exists (select 1 from documents where documents.id = document_chunks.document_id and documents.user_id = auth.uid())
+);
+create policy "Users can insert own document_chunks" on document_chunks for insert with check (
+  exists (select 1 from documents where documents.id = document_chunks.document_id and documents.user_id = auth.uid())
+);
+create policy "Users can update own document_chunks" on document_chunks for update using (
+  exists (select 1 from documents where documents.id = document_chunks.document_id and documents.user_id = auth.uid())
+);
+create policy "Users can delete own document_chunks" on document_chunks for delete using (
+  exists (select 1 from documents where documents.id = document_chunks.document_id and documents.user_id = auth.uid())
+);
 
 create policy "Users can CRUD own flashcards" on flashcards for all using (auth.uid() = user_id);
 create policy "Users can CRUD own quizzes" on quizzes for all using (auth.uid() = user_id);

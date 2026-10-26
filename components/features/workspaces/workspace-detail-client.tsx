@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
-  ArrowLeft, FileText, MessageSquare, BookOpen, BrainCircuit, CheckSquare, Sparkles
+  ArrowLeft, FileText, MessageSquare, BookOpen, BrainCircuit, CheckSquare, Sparkles, Loader2
 } from "lucide-react"
 import { format } from "date-fns"
 import { id as localeId } from "date-fns/locale"
@@ -27,6 +27,8 @@ interface WorkspaceDetailClientProps {
     name: string
     size: number
     url: string
+    status?: string
+    errorMessage?: string
   } | null
 }
 
@@ -92,7 +94,7 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
           Back
         </Link>
         <span className="text-border text-xs">|</span>
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <FileText className="h-4 w-4 text-primary" />
           </div>
@@ -108,6 +110,19 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
                   <span suppressHydrationWarning>{formattedSize} MB</span>
                   <span className="text-border">•</span>
                   <span className="truncate max-w-[180px] opacity-60">{fileInfo.name}</span>
+                  {fileInfo.status === 'processing' || fileInfo.status === 'pending' ? (
+                    <span className="ml-2 flex items-center gap-1 text-yellow-500">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Indexing AI...
+                    </span>
+                  ) : fileInfo.status === 'failed' ? (
+                    <span className="ml-2 flex items-center gap-1 text-red-500">
+                      Processing Failed
+                    </span>
+                  ) : (
+                    <span className="ml-2 flex items-center gap-1 text-green-500">
+                      <Sparkles className="w-3 h-3" /> AI Ready
+                    </span>
+                  )}
                 </>
               )}
             </div>

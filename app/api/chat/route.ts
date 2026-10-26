@@ -1,6 +1,5 @@
-import { streamText, smoothStream } from "ai"
-import { google, CHAT_MODEL } from "@/lib/ai/google"
-import { downloadPdfBuffer } from "@/lib/ai/pdf"
+import { streamText, smoothStream, embed } from "ai"
+import { google, CHAT_MODEL, EMBEDDING_MODEL, EMBEDDING_DIMENSIONS } from "@/lib/ai/google"
 import { buildSystemPrompt } from "@/lib/ai/prompts"
 import { createClient } from "@/utils/supabase/server"
 
@@ -13,26 +12,29 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 })
     }
 
-    const { messages, workspaceId, fileUrl } = await req.json()
+    const { messages, workspaceId } = await req.json()
 
     if (!workspaceId) {
       return new Response("Workspace ID is required", { status: 400 })
     }
 
-    // Fetch workspace title for logging
-    const { data: workspace } = await supabase
+    // Validate workspace belongs to this user (security: no cross-workspace leak)
+    const { data: workspace, error: workspaceError } = await supabase
       .from("workspaces")
-      .select("title")
+      .select("id, title")
       .eq("id", workspaceId)
+      .eq("user_id", user.id)
       .single()
 
-    const workspaceTitle = workspace?.title ?? "Workspace"
+    if (workspaceError || !workspace) {
+      return new Response("Workspace not found or access denied", { status: 403 })
+    }
 
-    // If this is the start of the chat session, write to activity logs
+    // Activity log on first message
     if (Array.isArray(messages) && messages.length === 1) {
       const firstMessageText = messages[0].content || ""
-      const truncatedTitle = firstMessageText.length > 30 
-        ? firstMessageText.slice(0, 30) + "..." 
+      const truncatedTitle = firstMessageText.length > 30
+        ? firstMessageText.slice(0, 30) + "..."
         : firstMessageText
 
       await supabase.from("activity_logs").insert({
@@ -46,52 +48,74 @@ export async function POST(req: Request) {
       })
     }
 
-    // Build the conversation messages for the AI
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const aiMessages: any[] = []
+    // ── RAG Retrieval ─────────────────────────────────────────────────────────
+    const lastMessage = messages[messages.length - 1]
+    let contextText = ""
 
-    // If we have a file, prepend a "system user" message with the PDF attached.
-    // This is placed as the very first message so Gemini has full document context
-    // for the ENTIRE conversation, not just the first user message.
-    if (fileUrl) {
-      const pdfBuffer = await downloadPdfBuffer(fileUrl)
-      if (pdfBuffer) {
-        aiMessages.push({
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Ini adalah dokumen materi yang akan kita pelajari. Harap analisis seluruh isinya dan gunakan sebagai referensi utama untuk semua pertanyaan saya berikutnya.",
-            },
-            {
-              type: "file",
-              data: Buffer.from(pdfBuffer).toString("base64"),
-              mimeType: "application/pdf",
-            },
-          ],
+    if (lastMessage?.role === "user" && lastMessage.content) {
+      try {
+        // 1. Embed the user query using gemini-embedding-001 (3072 dims)
+        const { embedding } = await embed({
+          model: google.textEmbeddingModel(EMBEDDING_MODEL, {
+            outputDimensionality: EMBEDDING_DIMENSIONS,
+          }),
+          value: lastMessage.content,
         })
-        // Mandatory model acknowledgement to keep the conversation valid
-        aiMessages.push({
-          role: "assistant",
-          content: "Oke, dokumennya udah gue baca nih. Siap bantu lu belajar dari materi ini ya, gaskeun tanya aja",
-        })
-      } else {
-        console.warn("PDF download failed — proceeding without file attachment")
+
+        // 2. Similarity search — scoped strictly to this workspace (RLS + filter)
+        const { data: chunks, error: matchError } = await supabase.rpc(
+          "match_document_chunks",
+          {
+            query_embedding: embedding,
+            match_count: 5,
+            filter_workspace_id: workspaceId,
+            filter_user_id: user.id,
+          }
+        )
+
+        if (matchError) {
+          console.error("[RAG] match_document_chunks error:", matchError.message)
+        } else if (chunks && chunks.length > 0) {
+          contextText = (chunks as Array<{ content: string; similarity: number }>)
+            .map(c => c.content)
+            .join("\n\n---\n\n")
+        }
+      } catch (embErr) {
+        console.error("[RAG] Embedding/retrieval error:", embErr)
       }
     }
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // Append the actual user conversation after the document context
-    for (const msg of messages) {
-      aiMessages.push({
+    // Build AI messages list
+    const aiMessages: { role: string; content: string }[] = messages.map(
+      (msg: { role: string; content: string }) => ({
         role: msg.role,
         content: msg.content,
       })
+    )
+
+    // Inject RAG context into system prompt
+    let systemContent = buildSystemPrompt()
+    if (contextText) {
+      systemContent +=
+        `\n\n[KONTEKS DARI DOKUMEN — HASIL RETRIEVAL]\n` +
+        `Berikut adalah cuplikan materi yang paling relevan dengan pertanyaan user:\n\n` +
+        `${contextText}\n\n` +
+        `Aturan ketat:\n` +
+        `- Jawab HANYA berdasarkan konteks di atas.\n` +
+        `- Jika informasi tidak ada di konteks, katakan dengan jujur: "hmm info ini kayanya ga ada di dokumen yang lu kasih ke gue 🤔"\n` +
+        `- Jangan mengarang atau menambah info dari luar dokumen.`
+    } else {
+      systemContent +=
+        `\n\n[KONTEKS DARI DOKUMEN — TIDAK ADA HASIL RETRIEVAL]\n` +
+        `Tidak ditemukan informasi yang relevan dari dokumen untuk pertanyaan ini. ` +
+        `Beritahu user dengan ramah bahwa jawaban tidak tersedia di dokumen.`
     }
 
     const result = streamText({
       model: google(CHAT_MODEL),
-      system: buildSystemPrompt(),
-      messages: aiMessages,
+      system: systemContent,
+      messages: aiMessages as any,
       temperature: 0.7,
       experimental_transform: smoothStream({ delayInMs: 40, chunking: "word" }),
     })
@@ -99,7 +123,7 @@ export async function POST(req: Request) {
     return result.toDataStreamResponse()
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Something went wrong"
-    console.error("Chat API Error:", error)
+    console.error("[Chat API] Error:", error)
     return new Response(message, { status: 500 })
   }
 }

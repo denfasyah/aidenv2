@@ -62,6 +62,23 @@ export async function createWorkspace(formData: FormData) {
     return { error: `Gagal mengunggah file: ${uploadError.message}` }
   }
 
+  // Insert document
+  const { data: document, error: docError } = await supabase
+    .from("documents")
+    .insert([{
+      workspace_id: workspace.id,
+      user_id: user.id,
+      name: file.name,
+      storage_path: fileName,
+      status: "pending"
+    }])
+    .select()
+    .single()
+
+  if (docError) {
+    console.error("Error creating document:", docError.message)
+  }
+
   // Log aktivitas
   await supabase.from("activity_logs").insert([{
     user_id: user.id,
@@ -71,7 +88,7 @@ export async function createWorkspace(formData: FormData) {
 
   revalidatePath("/workspaces")
   revalidatePath("/dashboard")
-  return { success: true }
+  return { success: true, workspaceId: workspace.id, documentId: document?.id, filePath: fileName }
 }
 
 export async function deleteWorkspace(id: string) {

@@ -23,6 +23,12 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
   if (error || !workspace) {
     notFound()
   }
+  
+  const { data: document } = await supabase
+    .from("documents")
+    .select("status, error_message")
+    .eq("workspace_id", id)
+    .single()
 
   // 2. Fetch file info from storage (materials/user_id/workspace_id/)
   const folderPath = `${user.id}/${workspace.id}`
@@ -51,33 +57,43 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
       fileInfo = {
         name: displayName,
         size: file.metadata?.size || 0,
-        url: signedUrlData.signedUrl
+        url: signedUrlData.signedUrl,
+        status: document?.status || 'completed',
+        errorMessage: document?.error_message
       }
     } else {
       // Debug for signedUrl failure
       fileInfo = {
         name: `ERROR: ${signedUrlError?.message || 'Unknown signed URL error'}`,
         size: 0,
-        url: ""
+        url: "",
+        status: "failed",
+        errorMessage: "URL error"
       }
     }
   } else if (filesError) {
     fileInfo = {
       name: `ERROR: ${filesError.message}`,
       size: 0,
-      url: ""
+      url: "",
+      status: "failed",
+      errorMessage: "Files error"
     }
   } else if (!files || files.length === 0) {
     fileInfo = {
       name: `ERROR: No files found in folder ${folderPath}`,
       size: 0,
-      url: ""
+      url: "",
+      status: "failed",
+      errorMessage: "No files"
     }
   } else {
     fileInfo = {
       name: `DEBUG: files=${JSON.stringify(files)}`,
       size: 0,
-      url: ""
+      url: "",
+      status: "failed",
+      errorMessage: "Unknown error"
     }
   }
 

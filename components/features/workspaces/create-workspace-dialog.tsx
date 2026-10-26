@@ -61,7 +61,18 @@ export function CreateWorkspaceDialog() {
     if (result?.error) {
       setFormError(result.error)
     } else {
-      showAlert.success("Berhasil", "Workspace baru telah dibuat!")
+      if (result.workspaceId && result.documentId && result.filePath) {
+        fetch("/api/assistant/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: result.workspaceId,
+            documentId: result.documentId,
+            filePath: result.filePath
+          })
+        }).catch(err => console.error("Failed to trigger processing:", err))
+      }
+      showAlert.success("Berhasil", "Workspace baru telah dibuat! Dokumen sedang diproses untuk AI.")
       setOpen(false)
       resetForm()
       router.push("/workspaces") // Reset filter
