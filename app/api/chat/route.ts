@@ -1,5 +1,6 @@
-import { streamText, smoothStream, embed } from "ai"
-import { google, CHAT_MODEL, EMBEDDING_MODEL, EMBEDDING_DIMENSIONS } from "@/lib/ai/google"
+import { streamText, smoothStream } from "ai"
+import { google, CHAT_MODEL } from "@/lib/ai/google"
+import { retrieveRelevantChunks } from "@/lib/ai/rag-retriever"
 import { buildSystemPrompt } from "@/lib/ai/prompts"
 import { createClient } from "@/utils/supabase/server"
 
@@ -53,35 +54,15 @@ export async function POST(req: Request) {
     let contextText = ""
 
     if (lastMessage?.role === "user" && lastMessage.content) {
-      try {
-        // 1. Embed the user query using gemini-embedding-001 (3072 dims)
-        const { embedding } = await embed({
-          model: google.textEmbeddingModel(EMBEDDING_MODEL, {
-            outputDimensionality: EMBEDDING_DIMENSIONS,
-          }),
-          value: lastMessage.content,
-        })
+      const chunks = await retrieveRelevantChunks(supabase, {
+        workspaceId,
+        userId: user.id,
+        query: lastMessage.content,
+        matchCount: 5,
+      })
 
-        // 2. Similarity search — scoped strictly to this workspace (RLS + filter)
-        const { data: chunks, error: matchError } = await supabase.rpc(
-          "match_document_chunks",
-          {
-            query_embedding: embedding,
-            match_count: 5,
-            filter_workspace_id: workspaceId,
-            filter_user_id: user.id,
-          }
-        )
-
-        if (matchError) {
-          console.error("[RAG] match_document_chunks error:", matchError.message)
-        } else if (chunks && chunks.length > 0) {
-          contextText = (chunks as Array<{ content: string; similarity: number }>)
-            .map(c => c.content)
-            .join("\n\n---\n\n")
-        }
-      } catch (embErr) {
-        console.error("[RAG] Embedding/retrieval error:", embErr)
+      if (chunks && chunks.length > 0) {
+        contextText = chunks.map(c => c.content).join("\n\n---\n\n")
       }
     }
     // ─────────────────────────────────────────────────────────────────────────
@@ -103,7 +84,8 @@ export async function POST(req: Request) {
         `${contextText}\n\n` +
         `Aturan ketat:\n` +
         `- Jawab HANYA berdasarkan konteks di atas.\n` +
-        `- Jika informasi tidak ada di konteks, katakan dengan jujur: "hmm info ini kayanya ga ada di dokumen yang lu kasih ke gue 🤔"\n` +
+        `- Jika informasi tidak ada di konteks, katakan dengan jujur: 
+        "hmm info ini kayanya ga ada di dokumen yang lu kasih ke gue 🤔"\n` +
         `- Jangan mengarang atau menambah info dari luar dokumen.`
     } else {
       systemContent +=

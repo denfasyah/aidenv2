@@ -1,6 +1,7 @@
 import { generateText } from "ai"
 import { google, CHAT_MODEL } from "@/lib/ai/google"
 import { downloadPdfBuffer } from "@/lib/ai/pdf"
+import { getAllWorkspaceChunks, formatChunksForPrompt } from "@/lib/ai/rag-retriever"
 import { createClient } from "@/utils/supabase/server"
 
 export async function POST(req: Request) {
@@ -39,9 +40,17 @@ export async function POST(req: Request) {
     const workspaceTitle = (workspace as any)?.title ?? "Dokumen"
     const count = questionCount === 10 ? 10 : 5
 
-    // 3. Download PDF buffer if fileUrl provided
+    // 3. RAG Retrieval — Fetch document chunks from vector store for this workspace
+    let contextText = ""
+    const ragChunks = await getAllWorkspaceChunks(supabase, workspaceId)
+    
+    if (ragChunks.length > 0) {
+      contextText = formatChunksForPrompt(ragChunks)
+    }
+
+    // Fallback: If chunks are not yet indexed, download PDF buffer
     let pdfContent: any = null
-    if (fileUrl) {
+    if (!contextText && fileUrl) {
       const pdfBuffer = await downloadPdfBuffer(fileUrl)
       if (pdfBuffer) {
         pdfContent = {
@@ -53,7 +62,7 @@ export async function POST(req: Request) {
     }
 
     // 4. System Instruction for JSON generation with page number references
-    const systemInstruction = `Kamu adalah Aiden, asisten belajar AI yang pintar dan teliti. Tugasmu membuat kuis pilihan ganda interaktif dari dokumen PDF.
+    const systemInstruction = `Kamu adalah Aiden, asisten belajar AI yang pintar dan teliti. Tugasmu membuat kuis pilihan ganda interaktif dari konteks materi dokumen yang disediakan.
 
 PENTING: Output HANYA berupa JSON valid. TANPA markdown block, TANPA \`\`\`json, TANPA teks penjelasan sebelum/sesudah JSON.
 
@@ -76,12 +85,17 @@ ATURAN KETAT:
 - Setiap soal mempunyai 4 pilihan jawaban (options).
 - answerIndex adalah indeks 0-based dari pilihan yang benar (0 untuk pilihan 1, 1 untuk pilihan 2, 2 untuk pilihan 3, 3 untuk pilihan 4).
 - explanation: Uraian singkat padat yang menjelaskan alasan kebenaran jawaban berdasarkan dokumen.
-- pageRef: WAJIB sertakan nomor halaman dokumen tempat jawaban ditemukan, contoh: "Hal. 2", "Hal. 4", atau "Hal. 5-6".
+- pageRef: WAJIB sertakan nomor halaman atau nomor bagian dokumen tempat jawaban ditemukan, contoh: "Hal. 2", "Hal. 4", atau "Bagian #1".
 - Gunakan Bahasa Indonesia yang baik, akademis namun mudah dipahami.
-- Sumber materi HANYA dari isi dokumen PDF yang dilampirkan.`
+- Sumber materi HANYA dari isi konteks dokumen yang disediakan melalui sistem RAG.`
 
     const messages: any[] = []
-    if (pdfContent) {
+    if (contextText) {
+      messages.push({
+        role: "user",
+        content: `Buat tepat ${count} soal kuis dari materi "${workspaceTitle}" berdasarkan konteks dokumen hasil retrieval RAG berikut. Pastikan menyertakan rujukan nomor halaman/bagian (pageRef) pada setiap soal.\n\n[KONTEKS DOKUMEN HASIL RETRIEVAL RAG]\n${contextText}`,
+      })
+    } else if (pdfContent) {
       messages.push({
         role: "user",
         content: [

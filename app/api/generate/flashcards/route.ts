@@ -1,6 +1,7 @@
 import { generateText } from "ai"
 import { google, CHAT_MODEL } from "@/lib/ai/google"
 import { downloadPdfBuffer } from "@/lib/ai/pdf"
+import { getAllWorkspaceChunks, formatChunksForPrompt } from "@/lib/ai/rag-retriever"
 import { createClient } from "@/utils/supabase/server"
 
 export async function POST(req: Request) {
@@ -40,9 +41,17 @@ export async function POST(req: Request) {
     const workspaceTitle = (workspace as any)?.title ?? "Dokumen"
     const count = cardCount === 10 ? 10 : 5
 
-    // 3. Download PDF
+    // 3. RAG Retrieval — Fetch document chunks from vector store for this workspace
+    let contextText = ""
+    const ragChunks = await getAllWorkspaceChunks(supabase, workspaceId)
+    
+    if (ragChunks.length > 0) {
+      contextText = formatChunksForPrompt(ragChunks)
+    }
+
+    // Fallback: If chunks are not yet indexed, download PDF buffer
     let pdfContent: any = null
-    if (fileUrl) {
+    if (!contextText && fileUrl) {
       const pdfBuffer = await downloadPdfBuffer(fileUrl)
       if (pdfBuffer) {
         pdfContent = {
@@ -54,23 +63,33 @@ export async function POST(req: Request) {
     }
 
     // 4. System prompt for structured JSON output
-    const systemInstruction = `Kamu adalah Aiden, temen belajar yang gaul dan pinter. Tugasmu bikin flashcard dari materi.
+    const systemInstruction = `Kamu adalah Aiden, temen belajar yang gaul dan pinter. 
+    Tugasmu bikin flashcard dari konteks materi dokumen yang disediakan.
 
-PENTING: Output HANYA berupa JSON valid. TANPA markdown, TANPA backtick, TANPA penjelasan apapun. Langsung JSON mentah.
+PENTING: Output HANYA berupa JSON valid. TANPA markdown, TANPA backtick, 
+TANPA penjelasan apapun. Langsung JSON mentah.
 
 Format JSON yang WAJIB diikuti:
-{"cards":[{"front":"pertanyaan singkat","back":"jawaban singkat 1-2 kalimat"},{"front":"...","back":"..."}]}
+{"cards":[{"front":"pertanyaan singkat","back":"jawaban singkat 1-2 kalimat"},
+{"front":"...","back":"..."}]}
 
 ATURAN KETAT:
 - Buat TEPAT ${count} flashcard — tidak boleh lebih, tidak boleh kurang
 - Front: pertanyaan/soal singkat tentang konsep penting dari dokumen
-- Back: jawaban/penjelasan singkat padat (max 2 kalimat) beserta rujukan halaman dokumen jika ada (misal: "Jaringan komputer adalah ... (Hal. 2)")
+- Back: jawaban/penjelasan singkat padat (max 2 kalimat) 
+beserta rujukan bagian/halaman dokumen (misal: "Jaringan komputer adalah ... (Hal. 2)" 
+atau "(Bagian #1)")
 - Bahasa Indonesia yang jelas dan mudah dipahami
-- HANYA dari isi dokumen yang dilampirkan
+- HANYA dari isi konteks materi dokumen yang disediakan melalui sistem RAG
 - Output MURNI JSON saja, tidak ada teks lain sebelum atau sesudah JSON`
 
     const messages: any[] = []
-    if (pdfContent) {
+    if (contextText) {
+      messages.push({
+        role: "user",
+        content: `Buat tepat ${count} flashcard dari materi "${workspaceTitle}" berdasarkan konteks dokumen hasil retrieval RAG berikut:\n\n[KONTEKS DOKUMEN HASIL RETRIEVAL RAG]\n${contextText}`,
+      })
+    } else if (pdfContent) {
       messages.push({
         role: "user",
         content: [

@@ -1,6 +1,7 @@
 import { generateText } from "ai"
 import { google, CHAT_MODEL } from "@/lib/ai/google"
 import { downloadPdfBuffer } from "@/lib/ai/pdf"
+import { getAllWorkspaceChunks, formatChunksForPrompt } from "@/lib/ai/rag-retriever"
 import { createClient } from "@/utils/supabase/server"
 
 export async function POST(req: Request) {
@@ -42,9 +43,17 @@ export async function POST(req: Request) {
       })
     }
 
-    // 3. Download PDF buffer if available
+    // 3. RAG Retrieval — Fetch document chunks from vector store for this workspace
+    let contextText = ""
+    const ragChunks = await getAllWorkspaceChunks(supabase, workspaceId)
+    
+    if (ragChunks.length > 0) {
+      contextText = formatChunksForPrompt(ragChunks)
+    }
+
+    // Fallback: If chunks are not yet indexed, download PDF buffer
     let pdfContent: { type: "file"; data: string; mimeType: string } | null = null
-    if (fileUrl) {
+    if (!contextText && fileUrl) {
       const pdfBuffer = await downloadPdfBuffer(fileUrl)
       if (pdfBuffer) {
         pdfContent = {
@@ -66,15 +75,15 @@ IDENTITAS dan KEPRIBADIAN:
 - Panggil diri sendiri gue, panggil user lu
 
 TUGASMU SEKARANG:
-Buat ringkasan materi yang komprehensif, terstruktur, dan gampang dicerna dari dokumen PDF yang udah dilampirkan ya.
-Sertakan juga rujukan nomor halaman dokumen (misal: "(Hal. 2)" atau "[Halaman 3-5]") pada setiap poin pembahasan utama agar user tau dari mana sumbernya.
+Buat ringkasan materi yang komprehensif, terstruktur, dan gampang dicerna dari konteks materi dokumen yang disediakan ya.
+Sertakan juga rujukan nomor halaman atau bagian dokumen (misal: "(Hal. 2)" atau "[Bagian Dokumen #1]") pada setiap poin pembahasan utama agar user tau dari mana sumbernya.
 
 FORMAT RINGKASAN (wajib pakai Markdown murni, NO HTML):
 ### [Judul Materi] 📚
 Tulis paragraf singkat pengantar yang kasual ala Aiden.
 
 ### 🎯 Konsep Utama
-Bullet points poin-poin paling penting lengkap dengan rujukan halaman (misal: **Konsep A** (Hal. 2) — deskripsi).
+Bullet points poin-poin paling penting lengkap dengan rujukan halaman/bagian (misal: **Konsep A** (Hal. 2) — deskripsi).
 
 ### 📖 Penjelasan Detail
 Uraian singkat tiap konsep utama — pakai numbered list kalau ada urutan, bullet kalau ga berurutan.
@@ -86,14 +95,19 @@ Poin-poin istilah/konsep teknis yang wajib dikuasai.
 Rangkuman penutup gaya Aiden yang kasual — singkat, padat, bikin semangat.
 
 ATURAN KETAT:
-1. Hanya rangkum dari dokumen yang dilampirkan, ga boleh ngarang.
-2. WAJIB cantumkan rujukan nomor halaman dokumen (misal: "(Hal. 2)" atau "[Halaman 3-5]") di setiap poin pembahasan/konsep utama agar sumbernya super transparan.
+1. Hanya rangkum dari konteks dokumen yang disediakan melalui sistem RAG, ga boleh ngarang.
+2. WAJIB cantumkan rujukan bagian/nomor halaman dokumen di setiap poin pembahasan/konsep utama agar sumbernya super transparan.
 3. WAJIB selesaikan seluruh bagian dari judul, Konsep Utama, Penjelasan Detail, Konsep Diingat, hingga ✅ Takeaway. Dilarang berhenti/terpotong di tengah jalan.
 4. Gunakan Markdown murni: **bold**, bullet list (- ), numbered list, blockquote (>), heading (###). JANGAN pakai tag HTML.
 5. Bahasa Indonesia gaul tapi tetap informatif dan mudah dipahami.`
 
     const promptMessages: any[] = []
-    if (pdfContent) {
+    if (contextText) {
+      promptMessages.push({
+        role: "user",
+        content: `Halo Aiden! Tolong buatkan ringkasan materi komprehensif dan LENGKAP dari seluruh isi dokumen "${workspaceTitle}" ini berdasarkan konteks materi berikut ya!\n\n[KONTEKS DOKUMEN HASIL RETRIEVAL RAG]\n${contextText}`,
+      })
+    } else if (pdfContent) {
       promptMessages.push({
         role: "user",
         content: [
