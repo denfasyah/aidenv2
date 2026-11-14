@@ -1,33 +1,97 @@
 import { embedMany } from "ai"
 import { google, EMBEDDING_MODEL, EMBEDDING_DIMENSIONS } from "@/lib/ai/google"
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse")
 
-/**
- * Split text into overlapping chunks.
- * Tries to break on newlines/sentence boundaries for cleaner chunks.
- */
-function chunkText(text: string, chunkSize = 1200, overlap = 200): string[] {
-  const chunks: string[] = []
-  let i = 0
-  while (i < text.length) {
-    let end = i + chunkSize
-    // Try to snap to a sentence/newline boundary within ±100 chars
-    if (end < text.length) {
-      const boundary = text.lastIndexOf("\n", end)
-      if (boundary > i + chunkSize - 100) end = boundary + 1
+// Support both pdf-parse v2 (class PDFParse) and v1 (function)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParseModule = require("pdf-parse")
+
+interface ExtractedPage {
+  pageNumber: number
+  text: string
+}
+
+async function extractPagesFromPdf(buffer: Buffer): Promise<{ pages: ExtractedPage[]; fullText: string }> {
+  // If pdf-parse v2+ with PDFParse class
+  if (pdfParseModule && typeof pdfParseModule.PDFParse === "function") {
+    const parser = new pdfParseModule.PDFParse({ data: buffer })
+    try {
+      const textResult = await parser.getText()
+      if (textResult && Array.isArray(textResult.pages) && textResult.pages.length > 0) {
+        const pages: ExtractedPage[] = textResult.pages.map((p: any) => ({
+          pageNumber: p.num ?? 1,
+          text: p.text ?? "",
+        }))
+        const fullText = textResult.text || pages.map(p => p.text).join("\n\n")
+        return { pages, fullText }
+      }
+      return { pages: [{ pageNumber: 1, text: textResult?.text ?? "" }], fullText: textResult?.text ?? "" }
+    } finally {
+      if (typeof parser.destroy === "function") {
+        await parser.destroy().catch(() => {})
+      }
     }
-    const chunk = text.slice(i, end).trim()
-    if (chunk.length > 0) chunks.push(chunk)
-    i = end - overlap
-    if (i <= 0) i = end // prevent infinite loop on small texts
   }
-  return chunks
+
+  // Fallback for function-based pdf-parse
+  if (typeof pdfParseModule === "function") {
+    const pdfData = await pdfParseModule(buffer)
+    const fullText: string = pdfData.text ?? ""
+    return { pages: [{ pageNumber: 1, text: fullText }], fullText }
+  }
+
+  throw new Error("Pustaka pdf-parse tidak dapat diinisialisasi.")
+}
+
+interface ChunkItem {
+  content: string
+  pageNumber: number
+  totalChunksOnPage: number
+  chunkIndexOnPage: number
 }
 
 /**
- * Process a single document: extract text → chunk → embed → store in Supabase.
- * Uses gemini-embedding-001 (3072 dims, verified active Oct 2026).
+ * Split text of each page into overlapping chunks, strictly tagged with the exact pageNumber.
+ */
+function chunkPages(pages: ExtractedPage[], chunkSize = 1000, overlap = 150): ChunkItem[] {
+  const allChunks: ChunkItem[] = []
+
+  for (const page of pages) {
+    const pageText = page.text.trim()
+    if (!pageText || pageText.length < 15) continue
+
+    const pageChunks: string[] = []
+    let i = 0
+
+    while (i < pageText.length) {
+      let end = i + chunkSize
+      // Snap to a newline or sentence boundary if possible
+      if (end < pageText.length) {
+        const boundary = pageText.lastIndexOf("\n", end)
+        if (boundary > i + chunkSize - 120) end = boundary + 1
+      }
+      const slice = pageText.slice(i, end).trim()
+      if (slice.length > 0) pageChunks.push(slice)
+      i = end - overlap
+      if (i <= 0) i = end
+    }
+
+    const filtered = pageChunks.filter(c => c.trim().length > 25)
+    filtered.forEach((content, idx) => {
+      allChunks.push({
+        content,
+        pageNumber: page.pageNumber,
+        totalChunksOnPage: filtered.length,
+        chunkIndexOnPage: idx + 1,
+      })
+    })
+  }
+
+  return allChunks
+}
+
+/**
+ * Process a single document: extract text page-by-page → chunk with page tags → embed → store in Supabase.
+ * Uses gemini-embedding-001 (3072 dims).
  * Embedding is batched in groups of 20 to stay within API limits.
  */
 export async function processDocument(
@@ -55,19 +119,17 @@ export async function processDocument(
 
     const buffer = Buffer.from(await fileData.arrayBuffer())
 
-    // 3. Extract text from PDF
-    const pdfData = await pdfParse(buffer)
-    const text: string = pdfData.text ?? ""
+    // 3. Extract text per page
+    const { pages, fullText } = await extractPagesFromPdf(buffer)
 
-    if (!text || text.trim().length < 10) {
+    if (!fullText || fullText.trim().length < 10) {
       throw new Error("PDF appears to have no extractable text (possibly scanned image-only PDF)")
     }
 
-    // 4. Chunk text
-    const rawChunks = chunkText(text, 1200, 200)
-    const chunks = rawChunks.filter(c => c.trim().length > 30) // discard tiny noise chunks
+    // 4. Chunk text page-by-page
+    const chunkItems = chunkPages(pages, 1000, 150)
 
-    if (chunks.length === 0) {
+    if (chunkItems.length === 0) {
       throw new Error("No meaningful text chunks could be extracted from the PDF")
     }
 
@@ -75,8 +137,8 @@ export async function processDocument(
     const BATCH_SIZE = 20
     const allEmbeddings: number[][] = []
 
-    for (let b = 0; b < chunks.length; b += BATCH_SIZE) {
-      const batch = chunks.slice(b, b + BATCH_SIZE)
+    for (let b = 0; b < chunkItems.length; b += BATCH_SIZE) {
+      const batch = chunkItems.slice(b, b + BATCH_SIZE).map(c => c.content)
       const { embeddings } = await embedMany({
         model: google.textEmbeddingModel(EMBEDDING_MODEL, {
           outputDimensionality: EMBEDDING_DIMENSIONS,
@@ -89,15 +151,16 @@ export async function processDocument(
     // 6. Delete old chunks for this document (safe re-index)
     await supabase.from("document_chunks").delete().eq("document_id", documentId)
 
-    // 7. Insert new chunks
-    const chunkRecords = chunks.map((chunk, index) => ({
+    // 7. Insert new chunks with accurate page number metadata
+    const chunkRecords = chunkItems.map((item, index) => ({
       document_id: documentId,
       workspace_id: workspaceId,
-      content: chunk,
+      content: item.content,
       embedding: allEmbeddings[index],
       metadata: {
+        page_number: item.pageNumber,
         chunk_index: index,
-        total_chunks: chunks.length,
+        total_chunks: chunkItems.length,
         embedding_model: EMBEDDING_MODEL,
         embedding_dims: EMBEDDING_DIMENSIONS,
       },
@@ -117,7 +180,7 @@ export async function processDocument(
       .update({ status: "completed", error_message: null })
       .eq("id", documentId)
 
-    return { success: true, chunksIndexed: chunks.length }
+    return { success: true, chunksIndexed: chunkItems.length }
   } catch (error: any) {
     console.error("[RAG Processor] Error:", error)
     await supabase

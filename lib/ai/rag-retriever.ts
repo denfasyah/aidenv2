@@ -95,16 +95,16 @@ export async function getAllWorkspaceChunks(
 
 /**
  * Helper to format retrieved chunks into standard prompt context.
- * Includes chunk index and citation guidelines.
+ * Clearly specifies exact page numbers and instructs strict fidelity.
  */
 export function formatChunksForPrompt(chunks: DocumentChunkResult[]): string {
   if (!chunks || chunks.length === 0) return ""
 
   return chunks
     .map((chunk, idx) => {
-      const chunkNum = idx + 1
-      const total = chunk.metadata?.total_chunks ? `/${chunk.metadata.total_chunks}` : ""
-      return `[Bagian Dokumen #${chunkNum}${total}]\n${chunk.content.trim()}`
+      const page = chunk.metadata?.page_number
+      const pageLabel = page ? `Halaman ${page}` : `Bagian #${idx + 1}`
+      return `[SUMBER DOKUMEN: ${pageLabel}]\n${chunk.content.trim()}`
     })
     .join("\n\n---\n\n")
 }

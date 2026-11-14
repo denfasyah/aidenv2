@@ -58,11 +58,17 @@ export async function POST(req: Request) {
         workspaceId,
         userId: user.id,
         query: lastMessage.content,
-        matchCount: 5,
+        matchCount: 6,
       })
 
       if (chunks && chunks.length > 0) {
-        contextText = chunks.map(c => c.content).join("\n\n---\n\n")
+        contextText = chunks
+          .map((c, idx) => {
+            const page = c.metadata?.page_number
+            const pageLabel = page ? `Halaman ${page}` : `Bagian #${idx + 1}`
+            return `[SUMBER DOKUMEN: ${pageLabel}]\n${c.content.trim()}`
+          })
+          .join("\n\n---\n\n")
       }
     }
     // ─────────────────────────────────────────────────────────────────────────
@@ -79,26 +85,26 @@ export async function POST(req: Request) {
     let systemContent = buildSystemPrompt()
     if (contextText) {
       systemContent +=
-        `\n\n[KONTEKS DARI DOKUMEN — HASIL RETRIEVAL]\n` +
-        `Berikut adalah cuplikan materi yang paling relevan dengan pertanyaan user:\n\n` +
+        `\n\n[KONTEKS MATERI DOKUMEN — HASIL RETRIEVAL RAG]\n` +
+        `Berikut adalah kutipan materi asli dari dokumen yang relevan dengan pertanyaan user:\n\n` +
         `${contextText}\n\n` +
-        `Aturan ketat:\n` +
-        `- Jawab HANYA berdasarkan konteks di atas.\n` +
-        `- Jika informasi tidak ada di konteks, katakan dengan jujur: 
-        "hmm info ini kayanya ga ada di dokumen yang lu kasih ke gue 🤔"\n` +
-        `- Jangan mengarang atau menambah info dari luar dokumen.`
+        `PEDOMAN KETAT DAN WAJIB DIPATUHI:\n` +
+        `1. KEASLIAN TEKS (JANGAN DIPARAFRASE): Sampaikan penjelasan konsep, definisi, dan fakta SESUAI dengan apa yang tertulis pada teks materi di atas. Jangan memparafrase secara berlebihan yang berisiko mengubah arti atau detail materi asli.\n` +
+        `2. RUJUKAN HALAMAN AKURAT: Di setiap akhir poin jawaban atau penjelasan konsep, WAJIB cantumkan sitasi nomor halaman yang tertera pada label [SUMBER DOKUMEN: Halaman X] di atas (contoh format: "(Hal. X)"). DILARANG mengarang nomor halaman jika tidak tertera di sumber konteks.\n` +
+        `3. KEJUJURAN INFORMASI: Jika informasi atau jawaban dari pertanyaan user tidak ada di dalam teks konteks di atas, katakan dengan jujur dan ramah: "hmm info ini ga ada di materi dokumen yang lu kasih ke gue 🤔". DILARANG mengarang informasi dari luar konteks dokumen.\n` +
+        `4. Tetap gunakan nada bicara Aiden yang ramah dan nyaman dibaca, tetapi substansi jawaban harus setia 100% pada teks dokumen.`
     } else {
       systemContent +=
         `\n\n[KONTEKS DARI DOKUMEN — TIDAK ADA HASIL RETRIEVAL]\n` +
-        `Tidak ditemukan informasi yang relevan dari dokumen untuk pertanyaan ini. ` +
-        `Beritahu user dengan ramah bahwa jawaban tidak tersedia di dokumen.`
+        `Tidak ditemukan kutipan materi yang relevan dari dokumen untuk pertanyaan ini. ` +
+        `Katakan dengan ramah kepada user bahwa informasi tersebut tidak ditemukan pada dokumen modul materi.`
     }
 
     const result = streamText({
       model: google(CHAT_MODEL),
       system: systemContent,
       messages: aiMessages as any,
-      temperature: 0.7,
+      temperature: 0.1, // Rendah agar deterministik, akurat, dan tidak mengarang/berhalusinasi
       experimental_transform: smoothStream({ delayInMs: 40, chunking: "word" }),
     })
 

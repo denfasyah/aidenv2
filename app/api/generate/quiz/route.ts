@@ -74,7 +74,7 @@ Format JSON yang WAJIB diikuti:
       "question": "teks pertanyaan...",
       "options": ["pilihan A", "pilihan B", "pilihan C", "pilihan D"],
       "answerIndex": 0,
-      "explanation": "Penjelasan AI ringkas dan jelas mengapa jawaban tersebut benar...",
+      "explanation": "Penjelasan setia pada materi dokumen...",
       "pageRef": "Hal. 2"
     }
   ]
@@ -84,9 +84,8 @@ ATURAN KETAT:
 - Buat TEPAT ${count} soal pilihan ganda.
 - Setiap soal mempunyai 4 pilihan jawaban (options).
 - answerIndex adalah indeks 0-based dari pilihan yang benar (0 untuk pilihan 1, 1 untuk pilihan 2, 2 untuk pilihan 3, 3 untuk pilihan 4).
-- explanation: Uraian singkat padat yang menjelaskan alasan kebenaran jawaban berdasarkan dokumen.
-- pageRef: WAJIB sertakan nomor halaman atau nomor bagian dokumen tempat jawaban ditemukan, contoh: "Hal. 2", "Hal. 4", atau "Bagian #1".
-- Gunakan Bahasa Indonesia yang baik, akademis namun mudah dipahami.
+- explanation: Penjelasan ringkas dan padat yang SESUAI DENGAN TEKS MATERI DOKUMEN ASLI (JANGAN DIPARAFRASE BERLEBIHAN) yang menerangkan alasan kebenaran jawaban.
+- pageRef: WAJIB nomor halaman yang tepat dari label [SUMBER DOKUMEN: Halaman X] pada teks konteks materi tempat jawaban ditemukan, contoh: "Hal. 2", "Hal. 4". Dilarang mengarang halaman!
 - Sumber materi HANYA dari isi konteks dokumen yang disediakan melalui sistem RAG.`
 
     const messages: any[] = []

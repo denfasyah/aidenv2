@@ -63,25 +63,19 @@ export async function POST(req: Request) {
     }
 
     // 4. System prompt for structured JSON output
-    const systemInstruction = `Kamu adalah Aiden, temen belajar yang gaul dan pinter. 
-    Tugasmu bikin flashcard dari konteks materi dokumen yang disediakan.
+    const systemInstruction = `Kamu adalah Aiden, asisten belajar AI yang teliti dan cerdas. Tugasmu membuat flashcard dari konteks materi dokumen yang disediakan.
 
-PENTING: Output HANYA berupa JSON valid. TANPA markdown, TANPA backtick, 
-TANPA penjelasan apapun. Langsung JSON mentah.
+PENTING: Output HANYA berupa JSON valid. TANPA markdown, TANPA backtick, TANPA penjelasan apapun. Langsung JSON mentah.
 
 Format JSON yang WAJIB diikuti:
-{"cards":[{"front":"pertanyaan singkat","back":"jawaban singkat 1-2 kalimat"},
-{"front":"...","back":"..."}]}
+{"cards":[{"front":"pertanyaan spesifik tentang konsep","back":"jawaban akurat sesuai materi (Hal. X)"}]}
 
 ATURAN KETAT:
-- Buat TEPAT ${count} flashcard — tidak boleh lebih, tidak boleh kurang
-- Front: pertanyaan/soal singkat tentang konsep penting dari dokumen
-- Back: jawaban/penjelasan singkat padat (max 2 kalimat) 
-beserta rujukan bagian/halaman dokumen (misal: "Jaringan komputer adalah ... (Hal. 2)" 
-atau "(Bagian #1)")
-- Bahasa Indonesia yang jelas dan mudah dipahami
-- HANYA dari isi konteks materi dokumen yang disediakan melalui sistem RAG
-- Output MURNI JSON saja, tidak ada teks lain sebelum atau sesudah JSON`
+- Buat TEPAT ${count} flashcard — tidak boleh lebih, tidak boleh kurang.
+- Front: pertanyaan/soal ringkas tentang konsep materi yang ada di dokumen.
+- Back: jawaban yang SESUAI DENGAN TEKS MATERI DOKUMEN ASLI (JANGAN DIPARAFRASE BERLEBIHAN) disertai rujukan nomor halaman yang tepat dari label [SUMBER DOKUMEN: Halaman X] pada teks konteks (misal: "Jaringan komputer adalah ... (Hal. 2)").
+- HANYA bersumber dari isi konteks materi dokumen yang disediakan melalui sistem RAG. DILARANG mengarang informasi atau menebak halaman.
+- Output MURNI JSON saja, tidak ada teks lain sebelum atau sesudah JSON.`
 
     const messages: any[] = []
     if (contextText) {
