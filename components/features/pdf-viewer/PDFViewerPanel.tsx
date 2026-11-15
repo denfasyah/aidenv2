@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { FileText } from "lucide-react"
 
 interface PDFViewerPanelProps {
@@ -6,9 +7,19 @@ interface PDFViewerPanelProps {
     size: number
     url: string
   } | null
+  isActive?: boolean
 }
 
-export function PDFViewerPanel({ fileInfo }: PDFViewerPanelProps) {
+export function PDFViewerPanel({ fileInfo, isActive = true }: PDFViewerPanelProps) {
+  // Lazy mount the PDF iframe only once the user actually views the content tab
+  const [hasBeenViewed, setHasBeenViewed] = useState(isActive)
+
+  useEffect(() => {
+    if (isActive && !hasBeenViewed) {
+      setHasBeenViewed(true)
+    }
+  }, [isActive, hasBeenViewed])
+
   return (
     <div className="flex-1 flex flex-col w-full h-full">
       <div className="h-10 border-b border-border/50 bg-muted/30 flex items-center px-4 flex-shrink-0">
@@ -19,17 +30,24 @@ export function PDFViewerPanel({ fileInfo }: PDFViewerPanelProps) {
       </div>
       <div className="flex-1 w-full bg-black/5 relative">
         {fileInfo?.url ? (
-          <object
-            data={fileInfo.url}
-            type="application/pdf"
-            className="absolute inset-0 w-full h-full"
-          >
-            <iframe
-              src={fileInfo.url}
-              className="w-full h-full border-0"
-              title="PDF Viewer"
-            />
-          </object>
+          hasBeenViewed ? (
+            <object
+              data={fileInfo.url}
+              type="application/pdf"
+              className="absolute inset-0 w-full h-full"
+            >
+              <iframe
+                src={fileInfo.url}
+                className="w-full h-full border-0"
+                title="PDF Viewer"
+              />
+            </object>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
+              <FileText className="h-10 w-10 mb-2 opacity-30 text-primary" />
+              <p className="text-xs text-muted-foreground">Klik tab CONTENT untuk memuat pratinjau dokumen.</p>
+            </div>
+          )
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
             <FileText className="h-12 w-12 mb-4 opacity-20 text-destructive" />

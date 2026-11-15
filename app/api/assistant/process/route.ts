@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { processDocument } from "@/utils/rag/processor"
 
+export const maxDuration = 60
+
 export async function POST(req: Request) {
   try {
     const supabase = (await createClient()) as any

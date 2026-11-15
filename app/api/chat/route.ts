@@ -3,6 +3,9 @@ import { google, CHAT_MODEL } from "@/lib/ai/google"
 import { retrieveRelevantChunks } from "@/lib/ai/rag-retriever"
 import { buildSystemPrompt } from "@/lib/ai/prompts"
 import { createClient } from "@/utils/supabase/server"
+import { getOrParsePdf, findRelevantPagesFromPdf } from "@/lib/ai/pdf-pages"
+
+export const maxDuration = 60
 
 export async function POST(req: Request) {
   try {
@@ -13,7 +16,7 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 })
     }
 
-    const { messages, workspaceId } = await req.json()
+    const { messages, workspaceId, fileUrl } = await req.json()
 
     if (!workspaceId) {
       return new Response("Workspace ID is required", { status: 400 })
@@ -54,10 +57,13 @@ export async function POST(req: Request) {
     let contextText = ""
 
     if (lastMessage?.role === "user" && lastMessage.content) {
+      const userQuery = lastMessage.content
+
+      // 1. Try vector RAG chunks from Supabase first
       const chunks = await retrieveRelevantChunks(supabase, {
         workspaceId,
         userId: user.id,
-        query: lastMessage.content,
+        query: userQuery,
         matchCount: 6,
       })
 
@@ -69,6 +75,24 @@ export async function POST(req: Request) {
             return `[SUMBER DOKUMEN: ${pageLabel}]\n${c.content.trim()}`
           })
           .join("\n\n---\n\n")
+      }
+
+      // 2. Fallback: If chunks are empty (e.g. pgvector not yet created or indexing failed),
+      // parse PDF directly page-by-page from fileUrl
+      if (!contextText && fileUrl) {
+        try {
+          const parsedDoc = await getOrParsePdf(fileUrl)
+          if (parsedDoc && parsedDoc.pages.length > 0) {
+            const relevantPages = findRelevantPagesFromPdf(parsedDoc, userQuery, 4)
+            if (relevantPages.length > 0) {
+              contextText = relevantPages
+                .map((p) => `[SUMBER DOKUMEN: Halaman ${p.pageNumber}]\n${p.text}`)
+                .join("\n\n---\n\n")
+            }
+          }
+        } catch (pdfErr) {
+          console.error("[Chat API] PDF page fallback error:", pdfErr)
+        }
       }
     }
     // ─────────────────────────────────────────────────────────────────────────
@@ -86,7 +110,7 @@ export async function POST(req: Request) {
     if (contextText) {
       systemContent +=
         `\n\n[KONTEKS MATERI DOKUMEN — HASIL RETRIEVAL RAG]\n` +
-        `Berikut adalah kutipan materi asli dari dokumen yang relevan dengan pertanyaan user:\n\n` +
+        `Berikut adalah kutipan teks materi asli dari dokumen yang relevan dengan pertanyaan user:\n\n` +
         `${contextText}\n\n` +
         `PEDOMAN KETAT DAN WAJIB DIPATUHI:\n` +
         `1. KEASLIAN TEKS (JANGAN DIPARAFRASE): Sampaikan penjelasan konsep, definisi, dan fakta SESUAI dengan apa yang tertulis pada teks materi di atas. Jangan memparafrase secara berlebihan yang berisiko mengubah arti atau detail materi asli.\n` +
@@ -105,7 +129,7 @@ export async function POST(req: Request) {
       system: systemContent,
       messages: aiMessages as any,
       temperature: 0.1, // Rendah agar deterministik, akurat, dan tidak mengarang/berhalusinasi
-      experimental_transform: smoothStream({ delayInMs: 40, chunking: "word" }),
+      experimental_transform: smoothStream({ delayInMs: 20, chunking: "word" }),
     })
 
     return result.toDataStreamResponse()

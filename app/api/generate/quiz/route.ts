@@ -4,6 +4,8 @@ import { downloadPdfBuffer } from "@/lib/ai/pdf"
 import { getAllWorkspaceChunks, formatChunksForPrompt } from "@/lib/ai/rag-retriever"
 import { createClient } from "@/utils/supabase/server"
 
+export const maxDuration = 60
+
 export async function POST(req: Request) {
   try {
     const supabase = (await createClient()) as any

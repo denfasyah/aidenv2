@@ -158,7 +158,7 @@ export function WorkspaceDetailClient({ workspace, fileInfo }: WorkspaceDetailCl
 
         {/* Content (PDF Viewer) */}
         <div className={`absolute inset-0 ${activeTab === "content" ? "block" : "hidden"}`}>
-          <PDFViewerPanel fileInfo={fileInfo} />
+          <PDFViewerPanel fileInfo={fileInfo} isActive={activeTab === "content"} />
         </div>
 
         {/* Chat AI */}
