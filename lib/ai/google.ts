@@ -12,9 +12,8 @@ export const google = createGoogleGenerativeAI({
 export const CHAT_MODEL = "gemini-2.5-flash";
 
 /**
- * Embedding model — verified working via Google REST API (Oct 2026).
- * text-embedding-004 was shut down Jan 2026. gemini-embedding-001 is active.
- * Default output = 3072 dims (Matryoshka; can also use 768 or 1536).
+ * Embedding model — gemini-embedding-001 (Google Gemini).
+ * Output dimensionality set to 1536 (standard Matryoshka dimension supported by pgvector HNSW max 2000).
  */
 export const EMBEDDING_MODEL = "gemini-embedding-001";
-export const EMBEDDING_DIMENSIONS = 3072;
+export const EMBEDDING_DIMENSIONS = 1536;

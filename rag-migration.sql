@@ -1,14 +1,6 @@
 -- ============================================================
 -- RAG MIGRATION: Non-destructive (safe for existing data)
 -- Run this in Supabase SQL Editor > New Query
--- Date: 2026-10-09
--- ============================================================
--- 
--- IMPORTANT: This migration does NOT drop any existing tables.
--- It only ADDS new tables/columns if they don't exist.
---
--- PREREQUISITE: Enable pgvector extension first (once per database):
---   CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;
 -- ============================================================
 
 -- 0. Enable pgvector (safe: uses IF NOT EXISTS)
@@ -27,19 +19,18 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 
 -- 2. Create document_chunks table (stores text chunks + vector embeddings)
---    Uses gemini-embedding-001 output: 3072 dimensions (Matryoshka default)
+--    Uses gemini-embedding-001 output: 1536 dimensions (HNSW limit is 2000)
 CREATE TABLE IF NOT EXISTS document_chunks (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   document_id uuid REFERENCES documents(id) ON DELETE CASCADE NOT NULL,
   workspace_id uuid REFERENCES workspaces(id) ON DELETE CASCADE NOT NULL,
   content text NOT NULL,
-  embedding extensions.vector(3072),
+  embedding extensions.vector(1536),
   metadata jsonb,
   created_at timestamptz DEFAULT timezone('utc', now()) NOT NULL
 );
 
 -- 3. HNSW index for fast approximate nearest-neighbor cosine search
---    (Only create if doesn't exist — DROP + recreate if you need to change dims)
 CREATE INDEX IF NOT EXISTS document_chunks_embedding_idx
   ON document_chunks
   USING hnsw (embedding extensions.vector_cosine_ops);
@@ -106,12 +97,12 @@ CREATE POLICY "Users can delete own document_chunks"
     )
   );
 
--- 7. Drop old RPC function if exists, then recreate with 3072 dims + user filter
+-- 7. Drop old RPC function if exists, then recreate with 1536 dims + user filter
 DROP FUNCTION IF EXISTS match_document_chunks(extensions.vector, int, uuid);
 DROP FUNCTION IF EXISTS match_document_chunks(extensions.vector, int, uuid, uuid);
 
 CREATE OR REPLACE FUNCTION match_document_chunks(
-  query_embedding extensions.vector(3072),
+  query_embedding extensions.vector(1536),
   match_count      int DEFAULT 5,
   filter_workspace_id uuid DEFAULT NULL,
   filter_user_id   uuid DEFAULT NULL
