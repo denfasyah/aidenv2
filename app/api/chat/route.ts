@@ -3,7 +3,7 @@ import { google, CHAT_MODEL } from "@/lib/ai/google"
 import { retrieveRelevantChunks } from "@/lib/ai/rag-retriever"
 import { buildSystemPrompt } from "@/lib/ai/prompts"
 import { createClient } from "@/utils/supabase/server"
-import { getOrParsePdf, findRelevantPagesFromPdf } from "@/lib/ai/pdf-pages"
+import { downloadPdfBuffer } from "@/lib/ai/pdf"
 
 export const maxDuration = 60
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     if (lastMessage?.role === "user" && lastMessage.content) {
       const userQuery = lastMessage.content
 
-      // 1. Try vector RAG chunks from Supabase first
+      // Try vector RAG chunks from Supabase first
       const chunks = await retrieveRelevantChunks(supabase, {
         workspaceId,
         userId: user.id,
@@ -76,34 +76,45 @@ export async function POST(req: Request) {
           })
           .join("\n\n---\n\n")
       }
-
-      // 2. Fallback: If chunks are empty (e.g. pgvector not yet created or indexing failed),
-      // parse PDF directly page-by-page from fileUrl
-      if (!contextText && fileUrl) {
-        try {
-          const parsedDoc = await getOrParsePdf(fileUrl)
-          if (parsedDoc && parsedDoc.pages.length > 0) {
-            const relevantPages = findRelevantPagesFromPdf(parsedDoc, userQuery, 4)
-            if (relevantPages.length > 0) {
-              contextText = relevantPages
-                .map((p) => `[SUMBER DOKUMEN: Halaman ${p.pageNumber}]\n${p.text}`)
-                .join("\n\n---\n\n")
-            }
-          }
-        } catch (pdfErr) {
-          console.error("[Chat API] PDF page fallback error:", pdfErr)
-        }
-      }
     }
     // ─────────────────────────────────────────────────────────────────────────
 
+    // If RAG chunks are not yet indexed, fallback to Multimodal PDF directly (same as Summary & Flashcard)
+    let pdfFilePart: { type: "file"; data: string; mimeType: string } | null = null
+    if (!contextText && fileUrl) {
+      try {
+        const pdfBuffer = await downloadPdfBuffer(fileUrl)
+        if (pdfBuffer) {
+          pdfFilePart = {
+            type: "file",
+            data: Buffer.from(pdfBuffer).toString("base64"),
+            mimeType: "application/pdf",
+          }
+        }
+      } catch (pdfErr) {
+        console.error("[Chat API] PDF fallback error:", pdfErr)
+      }
+    }
+
     // Build AI messages list
-    const aiMessages: { role: string; content: string }[] = messages.map(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const aiMessages: any[] = messages.map(
       (msg: { role: string; content: string }) => ({
         role: msg.role,
         content: msg.content,
       })
     )
+
+    // If using Multimodal PDF fallback, attach PDF to the user's latest query
+    if (pdfFilePart && aiMessages.length > 0) {
+      const lastAiMsg = aiMessages[aiMessages.length - 1]
+      if (lastAiMsg.role === "user") {
+        lastAiMsg.content = [
+          { type: "text", text: typeof lastAiMsg.content === "string" ? lastAiMsg.content : "" },
+          pdfFilePart,
+        ]
+      }
+    }
 
     // Inject RAG context into system prompt
     let systemContent = buildSystemPrompt()
@@ -117,6 +128,14 @@ export async function POST(req: Request) {
         `2. RUJUKAN HALAMAN AKURAT: Di setiap akhir poin jawaban atau penjelasan konsep, WAJIB cantumkan sitasi nomor halaman yang tertera pada label [SUMBER DOKUMEN: Halaman X] di atas (contoh format: "(Hal. X)"). DILARANG mengarang nomor halaman jika tidak tertera di sumber konteks.\n` +
         `3. KEJUJURAN INFORMASI: Jika informasi atau jawaban dari pertanyaan user tidak ada di dalam teks konteks di atas, katakan dengan jujur dan ramah: "hmm info ini ga ada di materi dokumen yang lu kasih ke gue 🤔". DILARANG mengarang informasi dari luar konteks dokumen.\n` +
         `4. Tetap gunakan nada bicara Aiden yang ramah dan nyaman dibaca, tetapi substansi jawaban harus setia 100% pada teks dokumen.`
+    } else if (pdfFilePart) {
+      systemContent +=
+        `\n\n[DOKUMEN PDF DILAMPIRKAN LANGSUNG]\n` +
+        `User melampirkan seluruh dokumen PDF ke percakapan ini.\n` +
+        `PEDOMAN KETAT:\n` +
+        `1. Jawab pertanyaan user berdasarkan isi dokumen PDF yang dilampirkan.\n` +
+        `2. Cantumkan rujukan nomor halaman/slide asli dokumen tempat informasi ditemukan dalam format: (Hal. X) atau (Slide X).\n` +
+        `3. Jangan memparafrase berlebihan konsep atau definisi teknis, sampaikan sesuai teks asli materi.`
     } else {
       systemContent +=
         `\n\n[KONTEKS DARI DOKUMEN — TIDAK ADA HASIL RETRIEVAL]\n` +
@@ -127,7 +146,7 @@ export async function POST(req: Request) {
     const result = streamText({
       model: google(CHAT_MODEL),
       system: systemContent,
-      messages: aiMessages as any,
+      messages: aiMessages,
       temperature: 0.1, // Rendah agar deterministik, akurat, dan tidak mengarang/berhalusinasi
       experimental_transform: smoothStream({ delayInMs: 20, chunking: "word" }),
     })
