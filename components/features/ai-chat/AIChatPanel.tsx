@@ -150,10 +150,11 @@ export function AIChatPanel({ workspaceId, fileUrl }: AIChatPanelProps) {
     body: { workspaceId, fileUrl },
     onError: (err) => {
       const msg = err.message ?? ""
+      console.error("[AIChatPanel] Chat error:", err)
       if (msg.includes("429") || msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("quota")) {
         setErrorMsg("Aiden lagi kena rate limit nih, coba lagi beberapa detik ya 🙏")
       } else {
-        setErrorMsg("Waduh ada error, coba refresh atau tanya lagi ya 😅")
+        setErrorMsg(`Gagal merespons: ${msg || "Coba refresh atau tanya lagi ya 😅"}`)
       }
     },
     onFinish: (msg) => {
